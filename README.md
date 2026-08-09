@@ -20,6 +20,8 @@ and a live dashboard to act on it.
 | `index.html` | The live dashboard — self-contained, no build step, no dependencies beyond two Google Fonts |
 | `docs/evidence_report.html` | Full statistical evidence: correlation between every model input and actual fouling rate, leave-one-cycle-out validation results, feature importance |
 | `docs/training_logic.html` | Two diagrams explaining the training/validation mechanism itself |
+| `research/` | The actual research pipeline, in order: `20_detect_replacement_events.py` (label replacement cycles from raw ΔP), `21_build_rul_dataset.py` (feature engineering), `22_train_rul_models.py` (quantile regression + leave-one-cycle-out validation) |
+| `pipeline/` | Production scoring service: an Azure Function that pulls live sensor data and scores the trained model on a schedule — `rul_model/` is the clean, reusable core logic; `rul_pipeline/` is the Azure-specific glue (auth, ingestion, output); `tests/` is the pytest suite that runs in CI; `azure-pipelines.yml` is the CI/CD definition |
 
 ## The problem
 

@@ -1,0 +1,11 @@
+R_Tag_Name,Tag_Name,Description,Unit,Filter,Role
+PLANT.AMINE.P_DPIT_0510_VAL,PLANT_AMINE_P_DPIT_0510_VAL,F-510 Carbon Filter differential pressure,PSI,F510,primary_dp
+PLANT.AMINE.P_DPIT_0509_VAL,PLANT_AMINE_P_DPIT_0509_VAL,F-509/F-511 Sock Filter differential pressure,PSI,F509511,primary_dp
+PLANT.AMINE.P_DPIT_7502_VAL,PLANT_AMINE_P_DPIT_7502_VAL,Lean/rich exchanger differential pressure (F-510 side),PSI,F510,context
+PLANT.AMINE.P_DPIT_6502_VAL,PLANT_AMINE_P_DPIT_6502_VAL,Lean/rich exchanger differential pressure (F-509/511 side),PSI,F509511,context
+PLANT.AMINE.P_FIT_2512_VAL,PLANT_AMINE_P_FIT_2512_VAL,Amine circulation flow rate,GPM,shared,flow_driver
+PLANT.AMINE.CIRC514VFD21_RPM_FB,PLANT_AMINE_CIRC514VFD21_RPM_FB,CIRC514 circulation pump speed feedback,RPM,shared,context
+PLANT.AMINE.CIRC515VFD22_RPM_FB,PLANT_AMINE_CIRC515VFD22_RPM_FB,CIRC515 circulation pump speed feedback,RPM,shared,context
+PLANT.AMINE.P_TIT_1504_VAL,PLANT_AMINE_P_TIT_1504_VAL,Process temperature (general context),F,shared,context
+PLANT.AMINE.P_PIT_6503_VAL,PLANT_AMINE_P_PIT_6503_VAL,Process pressure (general context),PSIG,shared,context
+PLANT.AMINE.P_TIT_3507_VAL,PLANT_AMINE_P_TIT_3507_VAL,Flash drum temperature (amine inlet proxy),F,shared,temp_driver

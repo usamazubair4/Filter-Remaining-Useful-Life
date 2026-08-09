@@ -1,0 +1,32 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+
+    "RulScoreScheduleCron": "0 5 * * * *",
+
+    "DB_SERVER": "xxx.database.windows.net",
+    "DB_USER": "xxx",
+    "DB_PASSWORD": "xxx",
+    "DB_NAME": "xxx",
+
+    "AAD_CLIENT_ID": "xxx",
+    "AAD_CLIENT_SECRET": "xxx",
+    "AAD_SCOPE": "api://xxx/.default",
+    "AAD_TOKEN_ENDPOINT": "https://login.microsoftonline.com/xxx/oauth2/v2.0/token",
+
+    "OMNICONNECT_CUSTOMER": "the plant",
+    "OMNICONNECT_SITE": "Site-01",
+    "OMNICONNECT_CREDENTIALS": "xxx",
+    "OMNICONNECT_URL": "https://omniconnect-readapi.azurewebsites.net/api/ReadAPI?code=xxx",
+
+    "ADX_CLUSTER": "https://xxx.southeastasia.kusto.windows.net/",
+    "ADX_CLIENT_ID": "xxx",
+    "ADX_CLIENT_SECRET": "xxx",
+    "ADX_AUTHORITY_ID": "xxx",
+    "ADX_DB_NAME": "xxx",
+
+    "LOOKBACK_DAYS": "9"
+  }
+}

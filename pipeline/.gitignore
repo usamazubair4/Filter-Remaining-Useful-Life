@@ -1,0 +1,9 @@
+local.settings.json
+local_output/
+models/
+__pycache__/
+*.pyc
+.venv/
+.python_packages/
+bin/
+obj/

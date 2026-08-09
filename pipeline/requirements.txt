@@ -1,0 +1,10 @@
+# scikit-learn is pinned exactly, not floored -- unpickling a model bundle
+# trained on a different sklearn version can fail outright or, worse, load
+# silently with subtly different behavior. Re-pin here every time
+# scripts/22_train_rul_models.py retrains against a new sklearn version.
+azure-functions>=1.21.0
+pandas==3.0.3
+numpy==2.5.1
+scikit-learn==1.9.0
+joblib==1.5.3
+requests>=2.31

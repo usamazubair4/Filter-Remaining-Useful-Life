@@ -1,0 +1,174 @@
+# Azure DevOps pipeline for the Rich Amine Filter RUL scoring Function App.
+#
+# CI runs on every PR and push that touches this pipeline's own code. CD
+# (deploy) only runs on main, only after CI passes, and only actually
+# publishes when a human approves the "production" environment (see the
+# environment gate in the Deploy stage) -- this is a real Azure resource
+# being redeployed on a schedule, not a reversible local action.
+#
+# One-time setup required before this pipeline can run end to end (none of
+# this lives in the repo -- see README.md "CI/CD setup" for the full list):
+#   1. An Azure Resource Manager service connection in this Azure DevOps
+#      project, referenced below as $(azureServiceConnection).
+#   2. A Function App + resource group already provisioned in Azure
+#      (this pipeline deploys code to it, it does not provision it --
+#      infra-as-code for the Function App itself is a separate decision).
+#   3. A variable group named "rul-model-secrets" (ideally linked to an
+#      Azure Key Vault) containing every secret Configurations.py reads:
+#      DB_PASSWORD, AAD_CLIENT_SECRET, OMNICONNECT_CREDENTIALS,
+#      ADX_CLIENT_SECRET, etc. Mark each as secret in the variable group.
+#   4. An Azure DevOps Environment named "production" with an approval
+#      check, so a deploy pauses for sign-off before it runs.
+
+trigger:
+  branches:
+    include: [main]
+  paths:
+    include:
+      - azure_pipeline/*
+      - models/rul_model_bundle.joblib
+
+pr:
+  branches:
+    include: [main]
+  paths:
+    include:
+      - azure_pipeline/*
+
+variables:
+  - group: rul-model-secrets   # secret Configurations.py values -- see setup note 3 above
+  - name: pythonVersion
+    value: "3.11"               # matches the Function App's configured runtime version
+  - name: azureServiceConnection
+    value: "rul-model-azure-connection"   # rename to match your ARM service connection
+  - name: functionAppName
+    value: "rul-amine-filter-scoring"     # rename to match your provisioned Function App
+  - name: resourceGroupName
+    value: "rul-model-rg"                 # rename to match your resource group
+
+stages:
+  - stage: CI
+    displayName: "Build & test"
+    jobs:
+      - job: Test
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: $(pythonVersion)
+
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r azure_pipeline/requirements-dev.txt
+            displayName: "Install dependencies"
+
+          - script: |
+              python -m pytest azure_pipeline/tests \
+                --junitxml=$(Build.ArtifactStagingDirectory)/test-results.xml \
+                --cov=azure_pipeline/rul_model --cov=azure_pipeline/rul_pipeline \
+                --cov-report=xml:$(Build.ArtifactStagingDirectory)/coverage.xml
+            displayName: "Run unit tests"
+            env:
+              # test_pipeline.py's bundle fixture looks for this file and
+              # skips (not fails) if it's missing -- present here so CI
+              # exercises the real scoring path, not just a skip.
+              MODEL_BUNDLE_PATH: $(Build.SourcesDirectory)/models/rul_model_bundle.joblib
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFiles: "$(Build.ArtifactStagingDirectory)/test-results.xml"
+
+          - task: PublishCodeCoverageResults@2
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: "$(Build.ArtifactStagingDirectory)/coverage.xml"
+
+  - stage: Deploy
+    displayName: "Deploy scoring Function App"
+    dependsOn: CI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployFunctionApp
+        environment: "production"   # holds the approval gate -- see setup note 4
+        pool:
+          vmImage: "ubuntu-latest"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: $(pythonVersion)
+
+                - script: |
+                    set -e
+                    mkdir -p azure_pipeline/models
+                    cp models/rul_model_bundle.joblib azure_pipeline/models/rul_model_bundle.joblib
+                  displayName: "Bundle the trained model into the deployment package"
+                  # The Function App package is azure_pipeline/'s contents
+                  # zipped at the root -- there's no repo root inside it, so
+                  # the model file has to be copied in at this layer. See
+                  # rul_pipeline/pipeline.py's MODEL_BUNDLE_PATH comment.
+
+                - task: ArchiveFiles@2
+                  displayName: "Zip the Function App package"
+                  inputs:
+                    rootFolderOrFile: "azure_pipeline"
+                    includeRootFolder: false
+                    archiveType: "zip"
+                    archiveFile: "$(Build.ArtifactStagingDirectory)/functionapp.zip"
+                    replaceExistingArchive: true
+                    # tests/ and dev-only files don't need to ship to production
+                    excludePatterns: |
+                      tests/**
+                      __pycache__/**
+                      *.pyc
+                      local.settings.json
+                      local.settings.json.template
+                      local_output/**
+                      .gitignore
+                      requirements-dev.txt
+
+                - task: AzureCLI@2
+                  displayName: "Set Function App settings from rul-model-secrets"
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -e
+                      az functionapp config appsettings set \
+                        --name $(functionAppName) \
+                        --resource-group $(resourceGroupName) \
+                        --settings \
+                          "SCM_DO_BUILD_DURING_DEPLOYMENT=true" \
+                          "RulScoreScheduleCron=0 5 * * * *" \
+                          "DB_SERVER=$(DB_SERVER)" \
+                          "DB_USER=$(DB_USER)" \
+                          "DB_PASSWORD=$(DB_PASSWORD)" \
+                          "DB_NAME=$(DB_NAME)" \
+                          "AAD_CLIENT_ID=$(AAD_CLIENT_ID)" \
+                          "AAD_CLIENT_SECRET=$(AAD_CLIENT_SECRET)" \
+                          "AAD_SCOPE=$(AAD_SCOPE)" \
+                          "AAD_TOKEN_ENDPOINT=$(AAD_TOKEN_ENDPOINT)" \
+                          "OMNICONNECT_CUSTOMER=$(OMNICONNECT_CUSTOMER)" \
+                          "OMNICONNECT_SITE=$(OMNICONNECT_SITE)" \
+                          "OMNICONNECT_CREDENTIALS=$(OMNICONNECT_CREDENTIALS)" \
+                          "OMNICONNECT_URL=$(OMNICONNECT_URL)" \
+                          "LOOKBACK_DAYS=9"
+                      # ADX_* settings are omitted -- not wired into the live
+                      # scoring path yet (predictions write locally for now,
+                      # see rul_pipeline/sink.py). Add them here when that
+                      # sink is switched over.
+
+                - task: AzureFunctionApp@2
+                  displayName: "Deploy zip to Function App"
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    appType: "functionAppLinux"
+                    appName: $(functionAppName)
+                    package: "$(Build.ArtifactStagingDirectory)/functionapp.zip"
