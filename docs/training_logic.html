@@ -1,0 +1,230 @@
+<title>How the RUL Model Is Trained &amp; Validated</title>
+<style>
+  :root{
+    color-scheme: light;
+    --page:#F3F5F7; --surface:#FFFFFF; --surface-2:#F7F9FB;
+    --ink:#12181D; --ink-2:#45525C; --muted:#7C8892;
+    --border:rgba(18,24,29,0.11); --grid:#E3E8EC;
+    --dp:#2a78d6; --temp:#eb6834; --flow:#1baf7a;
+    --shadow: 0 1px 2px rgba(18,24,29,0.06), 0 8px 24px rgba(18,24,29,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --page:#0B1116; --surface:#121A21; --surface-2:#16202A;
+      --ink:#F2F6F8; --ink-2:#AEBBC4; --muted:#85929C;
+      --border:rgba(255,255,255,0.11); --grid:#223038;
+      --dp:#3987e5; --temp:#d95926; --flow:#199e70;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:#0B1116; --surface:#121A21; --surface-2:#16202A;
+    --ink:#F2F6F8; --ink-2:#AEBBC4; --muted:#85929C;
+    --border:rgba(255,255,255,0.11); --grid:#223038;
+    --dp:#3987e5; --temp:#d95926; --flow:#199e70;
+  }
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --page:#F3F5F7; --surface:#FFFFFF; --surface-2:#F7F9FB;
+    --ink:#12181D; --ink-2:#45525C; --muted:#7C8892; --border:rgba(18,24,29,0.11);
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--page); color:var(--ink);
+    font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:15.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1040px; margin:0 auto; padding:44px 24px 88px; }
+  @media (max-width:640px){ .wrap{ padding:24px 16px 64px; } }
+  h1{ font-size:clamp(24px,3.6vw,32px); font-weight:800; letter-spacing:-0.01em; text-wrap:balance; margin:0 0 10px; }
+  h2{ font-size:18px; font-weight:700; margin:0 0 6px; }
+  p{ margin:0 0 14px; max-width:70ch; color:var(--ink-2); }
+  .eyebrow{ font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--dp); margin-bottom:8px; }
+  .lede{ max-width:68ch; font-size:16px; }
+  .doc-head{ padding-bottom:24px; margin-bottom:8px; border-bottom:1px solid var(--border); }
+
+  figure{ margin:36px 0; background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:22px 22px 18px; box-shadow:var(--shadow); }
+  figure svg{ display:block; width:100%; height:auto; overflow:visible; }
+  figcaption{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13.5px; color:var(--muted); }
+  figcaption b{ color:var(--ink-2); }
+  .fig-eyebrow{ font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
+  .fig-title{ font-size:15.5px; font-weight:700; margin-bottom:14px; }
+
+  svg text{ fill:currentColor; font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .box-title{ font-size:12.5px; font-weight:700; }
+  .box-sub{ font-size:10.5px; fill:var(--muted); }
+  .chip-label{ font-size:10.5px; font-weight:600; }
+  .accent{ color:var(--dp); }
+  .accent-fill{ fill:var(--dp); }
+
+  .bridge{ display:flex; align-items:center; gap:16px; margin:8px 0 8px; }
+  .bridge .line{ flex:1; height:1px; background:var(--border); }
+  .bridge .text{ font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+
+  footer{ margin-top:56px; padding-top:20px; border-top:1px solid var(--border); }
+  footer p{ font-size:12px; color:var(--muted); }
+</style>
+
+<div class="wrap">
+  <div class="doc-head">
+    <div class="eyebrow">Companion to the RUL Readiness &amp; Evidence Report</div>
+    <h1>How the Model Is Trained &amp; Validated</h1>
+    <p class="lede">Two mechanisms from <code style="font-size:14px">scripts/22_train_rul_models.py</code> worth walking management through directly: how the accuracy numbers are tested honestly, and how one forecast becomes a range instead of a single guess.</p>
+  </div>
+
+  <figure>
+    <div class="fig-eyebrow">Mechanism 1 — Validation</div>
+    <div class="fig-title">Every accuracy number comes from a cycle the model never trained on</div>
+    <svg viewBox="0 0 1000 330" role="img" aria-label="Leave-one-cycle-out validation: from twelve historical cycles, one is held out as a test while the model trains on the other eleven, predicts the held-out cycle, and the prediction is compared against what actually happened.">
+      <defs>
+        <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- 12 cycle chips -->
+      <g>
+        <text x="40" y="12" class="box-sub">12 complete historical cycles</text>
+        <!-- chips 0-4 -->
+        <g>
+          <rect x="40" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="67" y="41" text-anchor="middle" class="chip-label">C1</text>
+          <rect x="114" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="141" y="41" text-anchor="middle" class="chip-label">C2</text>
+          <rect x="188" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="215" y="41" text-anchor="middle" class="chip-label">C3</text>
+          <rect x="262" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="289" y="41" text-anchor="middle" class="chip-label">C4</text>
+          <rect x="336" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="363" y="41" text-anchor="middle" class="chip-label">C5</text>
+        </g>
+        <!-- held-out chip -->
+        <text x="437" y="12" text-anchor="middle" class="box-sub accent" fill="var(--dp)">held out this round</text>
+        <rect x="410" y="20" width="54" height="34" rx="6" fill="var(--dp)" fill-opacity="0.14" stroke="var(--dp)" stroke-width="1.6"/>
+        <text x="437" y="41" text-anchor="middle" class="chip-label" fill="var(--dp)">C6</text>
+        <!-- chips 6-11 -->
+        <g>
+          <rect x="484" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="511" y="41" text-anchor="middle" class="chip-label">C7</text>
+          <rect x="558" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="585" y="41" text-anchor="middle" class="chip-label">C8</text>
+          <rect x="632" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="659" y="41" text-anchor="middle" class="chip-label">C9</text>
+          <rect x="706" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="733" y="41" text-anchor="middle" class="chip-label">C10</text>
+          <rect x="780" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="807" y="41" text-anchor="middle" class="chip-label">C11</text>
+          <rect x="854" y="20" width="54" height="34" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.35"/>
+          <text x="881" y="41" text-anchor="middle" class="chip-label">C12</text>
+        </g>
+      </g>
+
+      <!-- train bars -->
+      <rect x="40" y="66" width="350" height="5" rx="2.5" fill="currentColor" opacity="0.3"/>
+      <rect x="484" y="66" width="424" height="5" rx="2.5" fill="currentColor" opacity="0.3"/>
+
+      <!-- connectors to TRAIN box -->
+      <line x1="215" y1="71" x2="372" y2="128" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <line x1="696" y1="71" x2="488" y2="128" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.4" marker-end="url(#arrow1)"/>
+
+      <!-- held-out connector to TEST box -->
+      <path d="M437,54 L437,100 L700,100 L700,128" fill="none" stroke="var(--dp)" stroke-width="1.6" stroke-dasharray="3 3" marker-end="url(#arrow1)"/>
+
+      <!-- TRAIN box -->
+      <rect x="330" y="130" width="200" height="62" rx="8" fill="var(--surface-2)" stroke="currentColor" stroke-opacity="0.25"/>
+      <text x="430" y="155" text-anchor="middle" class="box-title">TRAIN</text>
+      <text x="430" y="172" text-anchor="middle" class="box-sub">fit on the other 11 cycles</text>
+
+      <!-- TEST box -->
+      <rect x="620" y="130" width="220" height="62" rx="8" fill="var(--dp)" fill-opacity="0.10" stroke="var(--dp)" stroke-width="1.4"/>
+      <text x="730" y="155" text-anchor="middle" class="box-title" fill="var(--dp)">PREDICT</text>
+      <text x="730" y="172" text-anchor="middle" class="box-sub">forecast the held-out cycle</text>
+
+      <line x1="530" y1="161" x2="618" y2="161" stroke="currentColor" stroke-opacity="0.5" stroke-width="1.4" marker-end="url(#arrow1)"/>
+
+      <!-- COMPARE box -->
+      <line x1="730" y1="192" x2="730" y2="223" stroke="currentColor" stroke-opacity="0.5" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <rect x="605" y="225" width="250" height="66" rx="8" fill="var(--surface-2)" stroke="currentColor" stroke-opacity="0.25"/>
+      <text x="730" y="252" text-anchor="middle" class="box-title">COMPARE</text>
+      <text x="730" y="269" text-anchor="middle" class="box-sub">predicted date vs. what actually happened</text>
+      <text x="730" y="282" text-anchor="middle" class="box-sub">→ this fold's error, in days</text>
+    </svg>
+    <figcaption>This runs <b>12 times</b> — once per cycle, each taking a turn as the held-out test while the model trains on the remaining 11. No fold is ever scored on data it trained on, which is the same situation the model faces in live deployment. The 12 resulting errors are what's reported as "mean error: 4.47 days."</figcaption>
+  </figure>
+
+  <div class="bridge"><div class="line"></div><div class="text">the model this validation is testing</div><div class="line"></div></div>
+
+  <figure>
+    <div class="fig-eyebrow">Mechanism 2 — Live forecast</div>
+    <div class="fig-title">One forecast is really three models agreeing on a range</div>
+    <svg viewBox="0 0 1020 400" role="img" aria-label="Live sensor readings feed three separate models — a low estimate, a typical estimate, and a high estimate — whose three outputs combine into one predicted replacement window.">
+      <defs>
+        <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- readings box -->
+      <rect x="20" y="150" width="190" height="100" rx="8" fill="var(--surface-2)" stroke="currentColor" stroke-opacity="0.25"/>
+      <text x="115" y="178" text-anchor="middle" class="box-title">LIVE READINGS</text>
+      <text x="115" y="198" text-anchor="middle" class="box-sub">DP · flow · flash temperature</text>
+      <text x="115" y="212" text-anchor="middle" class="box-sub">cycle age</text>
+      <text x="115" y="234" text-anchor="middle" class="box-sub" fill="var(--muted)">same inputs to all three →</text>
+
+      <!-- fan-out arrows -->
+      <line x1="210" y1="200" x2="298" y2="62"  stroke="currentColor" stroke-opacity="0.4" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <line x1="210" y1="200" x2="298" y2="200" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <line x1="210" y1="200" x2="298" y2="338" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.3" marker-end="url(#arrow2)"/>
+
+      <!-- three model boxes -->
+      <rect x="300" y="20" width="230" height="84" rx="8" fill="var(--surface-2)" stroke="currentColor" stroke-opacity="0.25"/>
+      <text x="415" y="46" text-anchor="middle" class="box-title">LOW ESTIMATE</text>
+      <text x="415" y="64" text-anchor="middle" class="box-sub">trained to predict the</text>
+      <text x="415" y="78" text-anchor="middle" class="box-sub">10th-percentile outcome</text>
+
+      <rect x="300" y="158" width="230" height="84" rx="8" fill="var(--dp)" fill-opacity="0.10" stroke="var(--dp)" stroke-width="1.4"/>
+      <text x="415" y="184" text-anchor="middle" class="box-title" fill="var(--dp)">TYPICAL ESTIMATE</text>
+      <text x="415" y="202" text-anchor="middle" class="box-sub">trained to predict the</text>
+      <text x="415" y="216" text-anchor="middle" class="box-sub">most likely outcome (median)</text>
+
+      <rect x="300" y="296" width="230" height="84" rx="8" fill="var(--surface-2)" stroke="currentColor" stroke-opacity="0.25"/>
+      <text x="415" y="322" text-anchor="middle" class="box-title">HIGH ESTIMATE</text>
+      <text x="415" y="340" text-anchor="middle" class="box-sub">trained to predict the</text>
+      <text x="415" y="354" text-anchor="middle" class="box-sub">90th-percentile outcome</text>
+
+      <!-- arrows model -> result -->
+      <line x1="530" y1="62"  x2="588" y2="62"  stroke="currentColor" stroke-opacity="0.45" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <line x1="530" y1="200" x2="588" y2="200" stroke="var(--dp)" stroke-opacity="0.6" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <line x1="530" y1="338" x2="588" y2="338" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.3" marker-end="url(#arrow2)"/>
+
+      <!-- result chips -->
+      <rect x="590" y="40" width="170" height="44" rx="7" fill="none" stroke="currentColor" stroke-opacity="0.3"/>
+      <text x="675" y="67" text-anchor="middle" class="box-title">P10 — 32.1 days</text>
+
+      <rect x="590" y="178" width="170" height="44" rx="7" fill="none" stroke="var(--dp)" stroke-width="1.4"/>
+      <text x="675" y="205" text-anchor="middle" class="box-title" fill="var(--dp)">Median — 36.8 days</text>
+
+      <rect x="590" y="316" width="170" height="44" rx="7" fill="none" stroke="currentColor" stroke-opacity="0.3"/>
+      <text x="675" y="343" text-anchor="middle" class="box-title">P90 — 38.2 days</text>
+
+      <!-- converge arrows -->
+      <line x1="760" y1="62"  x2="828" y2="150" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <line x1="760" y1="200" x2="828" y2="200" stroke="var(--dp)" stroke-opacity="0.6" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <line x1="760" y1="338" x2="828" y2="250" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.3" marker-end="url(#arrow2)"/>
+      <text x="794" y="130" text-anchor="middle" class="box-sub">combine</text>
+
+      <!-- final box -->
+      <rect x="830" y="130" width="175" height="140" rx="9" fill="var(--dp)" fill-opacity="0.10" stroke="var(--dp)" stroke-width="1.6"/>
+      <text x="917" y="160" text-anchor="middle" class="box-title" fill="var(--dp)">REPLACEMENT WINDOW</text>
+      <text x="917" y="196" text-anchor="middle" font-size="17" font-weight="800">Aug 15–21</text>
+      <text x="917" y="220" text-anchor="middle" class="box-sub">typical: Aug 20</text>
+      <text x="917" y="248" text-anchor="middle" class="box-sub">(F-510 example, current)</text>
+    </svg>
+    <figcaption>The three boxes are the same underlying model type, trained three times against three different targets — a low, typical, and high outcome. That's why the live forecast is a <b>window</b> (Aug 15–21) rather than a single date: it's three independent opinions, not one number with error bars bolted on. The same three-model structure trains once on all 12 cycles for this production forecast, and 12 more times (holding one out each round) to produce the validation numbers in Mechanism 1.</figcaption>
+  </figure>
+
+  <footer>
+    <p>Source: scripts/22_train_rul_models.py (functions <code>train_models</code>, the leave-one-cycle-out loop, and the live inference block) · Companion to eda/RUL_Model_Report.md.</p>
+  </footer>
+</div>

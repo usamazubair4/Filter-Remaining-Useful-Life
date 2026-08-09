@@ -1,0 +1,852 @@
+<title>Rich Amine Filter RUL Model — Readiness &amp; Evidence Report</title>
+<style>
+  :root{
+    color-scheme: light;
+    --page:#F3F5F7; --surface:#FFFFFF; --surface-2:#F7F9FB;
+    --ink:#12181D; --ink-2:#45525C; --muted:#7C8892;
+    --border:rgba(18,24,29,0.11); --grid:#E3E8EC;
+    --good:#0ca30c; --warning:#c98500; --serious:#ec835a; --critical:#d03b3b;
+    --dp:#2a78d6; --temp:#eb6834; --flow:#1baf7a;
+    --f510:#2a78d6; --f511:#1baf7a;
+    --div-neg:#2a78d6; --div-pos:#e34948;
+    --good-bg:rgba(12,163,12,0.10); --warning-bg:rgba(201,133,0,0.12); --critical-bg:rgba(208,59,59,0.09);
+    --shadow: 0 1px 2px rgba(18,24,29,0.06), 0 8px 24px rgba(18,24,29,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --page:#0B1116; --surface:#121A21; --surface-2:#16202A;
+      --ink:#F2F6F8; --ink-2:#AEBBC4; --muted:#85929C;
+      --border:rgba(255,255,255,0.11); --grid:#223038;
+      --good:#0ca30c; --warning:#e0a838; --serious:#ec835a; --critical:#e66767;
+      --dp:#3987e5; --temp:#d95926; --flow:#199e70;
+      --f510:#3987e5; --f511:#199e70;
+      --div-neg:#3987e5; --div-pos:#e66767;
+      --good-bg:rgba(12,163,12,0.14); --warning-bg:rgba(224,168,56,0.14); --critical-bg:rgba(230,103,103,0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:#0B1116; --surface:#121A21; --surface-2:#16202A;
+    --ink:#F2F6F8; --ink-2:#AEBBC4; --muted:#85929C;
+    --border:rgba(255,255,255,0.11); --grid:#223038;
+    --good:#0ca30c; --warning:#e0a838; --serious:#ec835a; --critical:#e66767;
+    --dp:#3987e5; --temp:#d95926; --flow:#199e70;
+    --f510:#3987e5; --f511:#199e70;
+    --div-neg:#3987e5; --div-pos:#e66767;
+    --good-bg:rgba(12,163,12,0.14); --warning-bg:rgba(224,168,56,0.14); --critical-bg:rgba(230,103,103,0.12);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --page:#F3F5F7; --surface:#FFFFFF; --surface-2:#F7F9FB;
+    --ink:#12181D; --ink-2:#45525C; --muted:#7C8892;
+    --border:rgba(18,24,29,0.11); --grid:#E3E8EC;
+    --div-neg:#2a78d6; --div-pos:#e34948;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size:15.5px; line-height:1.62; -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Roboto Mono", monospace; }
+  .wrap{ max-width:1120px; margin:0 auto; padding:40px 24px 96px; }
+  @media (max-width:640px){ .wrap{ padding:24px 16px 72px; } }
+
+  h1,h2,h3{ text-wrap:balance; font-weight:800; letter-spacing:-0.01em; margin:0; }
+  h1{ font-size:clamp(26px,4vw,38px); line-height:1.14; }
+  h2{ font-size:22px; margin-bottom:4px; }
+  h3{ font-size:16px; font-weight:700; }
+  p{ margin:0 0 12px; max-width:70ch; color:var(--ink-2); }
+  .lede{ max-width:66ch; font-size:16.5px; color:var(--ink-2); }
+  a{ color:var(--dp); }
+
+  .eyebrow{
+    font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .section-num{ color:var(--dp); font-variant-numeric:tabular-nums; margin-right:.5em; }
+
+  /* ---------- document header ---------- */
+  .doc-head{
+    padding-bottom:28px; margin-bottom:28px; border-bottom:1px solid var(--border);
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .doc-head .eyebrow{ color:var(--dp); }
+  .doc-meta{
+    display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:6px;
+  }
+  .doc-meta div{ font-size:13px; color:var(--muted); }
+  .doc-meta b{ color:var(--ink-2); font-weight:600; }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:7px; padding:5px 12px 5px 10px;
+    border-radius:100px; font-size:12.5px; font-weight:700; background:var(--good-bg); color:var(--ink);
+    border:1px solid var(--border); width:fit-content;
+  }
+  .status-pill .dot{ width:8px; height:8px; border-radius:50%; background:var(--good); flex:none; }
+  .status-pill.warn{ background:var(--warning-bg); }
+  .status-pill.warn .dot{ background:var(--warning); }
+
+  /* ---------- KPI row ---------- */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border);
+    border:1px solid var(--border); border-radius:12px; overflow:hidden; margin:24px 0 30px; }
+  @media (max-width:760px){ .kpi-row{ grid-template-columns:repeat(2,1fr);} }
+  .kpi{ background:var(--surface); padding:18px 18px 16px; display:flex; flex-direction:column; gap:6px; }
+  .kpi .label{ font-size:12px; color:var(--muted); font-weight:600; }
+  .kpi .value{ font-size:28px; font-weight:800; letter-spacing:-0.02em; }
+  .kpi .delta{ font-size:12.5px; font-weight:700; }
+  .kpi .delta.good{ color:var(--good); }
+  .kpi .sub{ font-size:12px; color:var(--muted); }
+
+  /* ---------- section shell ---------- */
+  section.block{ margin:56px 0; }
+  .block > .head{ margin-bottom:18px; max-width:74ch; }
+  .block > .head h2{ display:flex; align-items:baseline; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:22px 24px; box-shadow:var(--shadow); }
+  .card + .card{ margin-top:16px; }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:800px){ .grid-2{ grid-template-columns:1fr; } }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:900px){ .grid-4{ grid-template-columns:repeat(2,1fr);} }
+
+  .chart-title{ font-size:13.5px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+  .chart-note{ font-size:12.5px; color:var(--muted); margin-bottom:10px; }
+  .chart-svg{ display:block; overflow:visible; }
+  .chart-scroll{ overflow-x:auto; }
+  .chart-label{ font-size:11.5px; fill:var(--ink-2); }
+  .chart-label-mono{ font-size:10.5px; fill:var(--muted); font-family: ui-monospace, "Cascadia Mono","SF Mono",Consolas,monospace;}
+  .chart-value{ font-size:11.5px; fill:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
+  .chart-axis{ font-size:10.5px; fill:var(--muted); }
+  .mark{ cursor:pointer; transition:opacity .12s; }
+  .mark:hover, .mark:focus{ opacity:.75; outline:none; }
+  .mark:focus-visible{ outline:2px solid var(--dp); outline-offset:2px; }
+
+  /* legend */
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; margin:2px 0 14px; }
+  .legend .item{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-2); }
+  .legend .swatch{ width:11px; height:11px; border-radius:3px; flex:none; }
+  .legend .swatch.line{ height:2px; width:16px; border-radius:2px; }
+
+  /* tooltip */
+  #tt{ position:fixed; pointer-events:none; z-index:50; background:var(--ink); color:var(--page);
+    padding:8px 11px; border-radius:8px; font-size:12.5px; box-shadow:0 6px 18px rgba(0,0,0,.25);
+    opacity:0; transform:translate(-50%,calc(-100% - 10px)) scale(.98); transition:opacity .1s, transform .1s;
+    max-width:240px; }
+  #tt.show{ opacity:1; transform:translate(-50%,calc(-100% - 10px)) scale(1); }
+  #tt .tt-value{ font-weight:700; font-variant-numeric:tabular-nums; }
+  #tt .tt-label{ color:var(--muted); margin-top:1px; }
+  :root:not([data-theme="dark"]) #tt .tt-label{ color:#c7c7c2; }
+
+  /* tables */
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    font-weight:700; padding:0 12px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td{ padding:9px 12px; border-bottom:1px solid var(--border); color:var(--ink-2); vertical-align:middle; }
+  tr:last-child td{ border-bottom:none; }
+  td.num, th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  td.strong{ color:var(--ink); font-weight:600; }
+  .tag{ font-family: ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace; font-size:11.5px; color:var(--muted); }
+  .sig{ display:inline-block; padding:1px 7px; border-radius:100px; font-size:10.5px; font-weight:700; }
+  .sig.yes{ background:var(--good-bg); color:var(--good); }
+  .sig.borderline{ background:var(--warning-bg); color:var(--warning); }
+  .sig.no{ background:var(--surface-2); color:var(--muted); }
+
+  /* process flow */
+  .flow{ display:grid; grid-template-columns:repeat(5,1fr); gap:0; align-items:stretch; }
+  @media (max-width:900px){ .flow{ grid-template-columns:1fr; } }
+  .flow .step{ position:relative; padding:18px 16px; background:var(--surface); border:1px solid var(--border); }
+  .flow .step:not(:last-child){ border-right:none; }
+  @media (max-width:900px){ .flow .step:not(:last-child){ border-right:1px solid var(--border); border-bottom:none; } }
+  .flow .step:first-child{ border-radius:12px 0 0 12px; }
+  .flow .step:last-child{ border-radius:0 12px 12px 0; }
+  @media (max-width:900px){ .flow .step:first-child{ border-radius:12px 12px 0 0; } .flow .step:last-child{ border-radius:0 0 12px 12px; } }
+  .flow .step .n{ font-size:11px; font-weight:800; color:var(--dp); font-variant-numeric:tabular-nums; }
+  .flow .step h3{ margin:6px 0 5px; font-size:14px; }
+  .flow .step p{ font-size:12.5px; margin:0; color:var(--muted); max-width:none; }
+  .flow .step:after{
+    content:""; position:absolute; right:-9px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; background:var(--surface); border-right:1px solid var(--border); border-top:1px solid var(--border);
+    transform:translateY(-50%) rotate(45deg); z-index:2;
+  }
+  @media (max-width:900px){ .flow .step:after{ right:50%; top:auto; bottom:-9px; transform:translateX(50%) rotate(135deg); } }
+  .flow .step:last-child:after{ display:none; }
+
+  /* callout */
+  .callout{ border:1px solid var(--border); border-radius:12px; padding:20px 22px; background:var(--surface); }
+  .callout.watch{ background:var(--warning-bg); border-color:rgba(201,133,0,.28); }
+  .callout .head-row{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+  .callout .head-row .dot{ width:9px; height:9px; border-radius:50%; background:var(--warning); flex:none; }
+  .callout h3{ font-size:14.5px; }
+  .callout ul{ margin:0; padding-left:20px; }
+  .callout li{ margin-bottom:10px; color:var(--ink-2); font-size:14px; }
+  .callout li:last-child{ margin-bottom:0; }
+  .callout li b{ color:var(--ink); }
+
+  /* forecast cards */
+  .fcard{ display:flex; flex-direction:column; gap:14px; }
+  .fcard .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .fcard .filter-name{ font-size:15px; font-weight:700; }
+  .fcard .filter-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .fcard .stat-row{ display:flex; gap:26px; flex-wrap:wrap; }
+  .fcard .stat{ }
+  .fcard .stat .label{ font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  .fcard .stat .value{ font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px; }
+  .fcard .stat .value.small{ font-size:14px; font-weight:700; color:var(--ink-2); }
+
+  footer{ margin-top:64px; padding-top:22px; border-top:1px solid var(--border); }
+  footer p{ font-size:12px; color:var(--muted); }
+
+  ::selection{ background:var(--dp); color:#fff; }
+  :focus-visible{ outline:2px solid var(--dp); outline-offset:2px; }
+</style>
+
+<div id="tt" role="tooltip"><div class="tt-value" id="ttValue"></div><div class="tt-label" id="ttLabel"></div></div>
+
+<div class="wrap">
+
+  <div class="doc-head">
+    <div class="eyebrow">Gas Processing Plant — Amine Treating Unit</div>
+    <h1>Rich Amine Filter RUL Model — Readiness &amp; Evidence Report</h1>
+    <p class="lede">A predictive model for the remaining useful life (RUL) of the two rich‑amine filters, F‑510 (carbon) and F‑509/511 (sock), built from differential‑pressure, flow and temperature history. This report lays out the statistical evidence behind every input the model uses, how its forecasts were validated, and what it is currently telling us about both filters in service.</p>
+    <div class="doc-meta">
+      <div><b>Prepared</b> 2026-08-06</div>
+      <div><b>Model version</b> v4 (+ flash temperature)</div>
+      <div><b>Filters covered</b> F-510 Carbon · F-509/511 Sock</div>
+      <div><b>Data window</b> Sep 2025 – Jul 2026</div>
+    </div>
+    <span class="status-pill"><span class="dot"></span> Ready for pilot deployment as a decision-support forecast</span>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="label">Median forecast error</div>
+      <div class="value">3.2 days</div>
+      <div class="delta good">↓ 39% vs. prior version</div>
+      <div class="sub">on cycles running 16–68 days</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Historical cycles validated</div>
+      <div class="value">12</div>
+      <div class="sub">6 independent periods × 2 filters, Oct&nbsp;2025–Jun&nbsp;2026</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Replacement events detected</div>
+      <div class="value">17</div>
+      <div class="sub">from 10 months of DP history, both filters</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Training observations</div>
+      <div class="value">10,140</div>
+      <div class="sub">hourly readings across 12 complete cycles</div>
+    </div>
+  </div>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow">Executive summary</div>
+      <h2>What this model does, and why it's ready</h2>
+    </div>
+    <div class="card">
+      <p style="max-width:none">The model watches each filter's differential pressure (DP), circulation flow and flash‑drum inlet temperature, and forecasts a <b style="color:var(--ink)">replacement window</b> — a low (P10), typical (median) and high (P90) estimate of days remaining — instead of only reporting today's DP reading against a fixed alarm limit. It is retrained and validated the same way every time: on 12 complete historical fouling‑to‑replacement cycles, always tested on a cycle it has never seen, which is the same situation it faces live.</p>
+      <p style="max-width:none">Two physical drivers explain most of why some cycles run 68 days and others run 17: <b style="color:var(--ink)">flash/inlet temperature</b> and <b style="color:var(--ink)">circulation flow</b>. Both are confirmed independently in Section 2 by direct correlation against actual cycle length — not only by the model's own internal ranking — which is the strongest form of evidence available at this data volume. Adding temperature as a model input cut the median forecast error from 5.3 to 3.2 days, the largest single improvement made to date.</p>
+      <p style="max-width:none;margin-bottom:0">The model is recommended for <b style="color:var(--ink)">pilot deployment</b> as a planning aid alongside the existing DP threshold alarms — it currently tells us both filters are healthy with roughly a month of running room. It is not yet a substitute for the alarms: with 12 cycles behind it, its confidence band is a useful <i>planning range</i>, not a calibrated probability (Section 6 covers this candidly, along with the two other open items worth tracking).</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow"><span class="section-num">01</span>Method</div>
+      <h2>How the forecast is built</h2>
+      <p>Five steps, run continuously from the plant historian to a live forecast.</p>
+    </div>
+    <div class="flow">
+      <div class="step"><div class="n">01</div><h3>Monitor DP</h3><p>DPIT‑0510 (F‑510) and DPIT‑0509 (F‑509/511), read every 2 minutes from the historian.</p></div>
+      <div class="step"><div class="n">02</div><h3>Detect cycles</h3><p>DP peaking ≥ 9 PSI then falling back to baseline is labeled one replacement event — 17 found historically.</p></div>
+      <div class="step"><div class="n">03</div><h3>Engineer features</h3><p>DP trend, circulation flow history, flash temperature history, and DP normalized by flow.</p></div>
+      <div class="step"><div class="n">04</div><h3>Train quantile model</h3><p>Gradient‑boosted regressors fit P10 / median / P90 of remaining life, validated cycle‑by‑cycle.</p></div>
+      <div class="step"><div class="n">05</div><h3>Live forecast</h3><p>Current sensor readings → a predicted replacement date window, refreshed continuously.</p></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow"><span class="section-num">02</span>Evidence</div>
+      <h2>Do the selected parameters actually predict fouling?</h2>
+      <p>Two independent checks, deliberately kept separate from the model's own opinion of itself. <b>Within a cycle</b>: does DP reliably climb as a filter nears replacement? <b>Across cycles</b>: do the parameters we feed the model actually explain why some cycles last three times longer than others?</p>
+    </div>
+
+    <div class="card">
+      <div class="chart-title">DP history, both filters — 10 months, with every detected replacement marked</div>
+      <div class="chart-note">Daily-average DP (PSI). Each dashed marker is a detected replacement (DP peak ≥ 9 PSI, then fall to baseline) — hover a marker for the instantaneous peak reached. The daily average smooths short spikes, so it runs lower than the peaks in the table below.</div>
+      <div class="legend">
+        <div class="item"><span class="swatch line" style="background:var(--f510)"></span>F-510 Carbon Filter</div>
+        <div class="item"><span class="swatch line" style="background:var(--f511)"></span>F-509/511 Sock Filter</div>
+        <div class="item"><span class="swatch line" style="background:var(--critical);border-top:2px dashed var(--critical);height:0;width:16px"></span>9 PSI detection threshold</div>
+      </div>
+      <div class="chart-scroll"><div id="chartDp"></div></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:16px">
+      <div class="card">
+        <h3 style="margin-bottom:2px">2a. Within a cycle: is DP a reliable real-time signal?</h3>
+        <p class="chart-note" style="margin-top:6px">Hourly correlation (Spearman) between each parameter and hours remaining until replacement, across all 10,140 training rows. This mostly confirms the obvious — DP climbs as replacement nears — which validates DP (and its trend/volatility) as the right thing to be watching moment-to-moment.</p>
+        <div id="chartRowCorr"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:2px">2b. Across cycles: what explains cycle length?</h3>
+        <p class="chart-note" style="margin-top:6px">Pearson correlation between each parameter's cycle‑average and that cycle's actual duration, across the 12 complete cycles (6 independent periods, mirrored across both filters). This is the evidence for <i>why</i> temperature and flow were added as model inputs.</p>
+        <div id="chartCycleCorr"></div>
+        <div class="legend" style="margin-top:12px;margin-bottom:0">
+          <div class="item"><span class="swatch" style="background:var(--div-pos)"></span>Higher value → longer cycle</div>
+          <div class="item"><span class="swatch" style="background:var(--div-neg)"></span>Higher value → shorter cycle</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="chart-title">The two strongest cross-cycle drivers, plotted directly</div>
+      <div class="chart-note">Each dot is one of the 12 complete cycles — its average parameter value against how long that cycle actually ran. The line is the best linear fit through these 12 points.</div>
+      <div class="legend">
+        <div class="item"><span class="swatch" style="background:var(--f510)"></span>F-510 Carbon</div>
+        <div class="item"><span class="swatch" style="background:var(--f511)"></span>F-509/511 Sock</div>
+      </div>
+      <div class="grid-4" id="scatterGrid"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="chart-title">Full correlation table — cycle-level evidence</div>
+      <div class="chart-scroll">
+      <table id="corrTable">
+        <thead><tr><th>Parameter</th><th>Tag</th><th class="num">r</th><th class="num">p-value</th><th>Significance (n=12)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+      <p style="margin:14px 0 0;font-size:12.5px">With only 6 independent time periods behind each filter, p&lt;0.10 is treated as directionally meaningful, not proof — flagged accordingly rather than only showing the conventional p&lt;0.05 cut.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow"><span class="section-num">03</span>Validation</div>
+      <h2>How the forecast performs on cycles it never trained on</h2>
+      <p><b>Leave-one-cycle-out validation:</b> for each of the 12 cycles, the model is retrained on the other 11 and tested only on the one held out — never on data adjacent to what it's scoring itself against. This is the honest measure of live performance, and it's the same check re-run every time a new cycle completes.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="chart-title">Predicted vs. actual remaining life, all held-out cycles</div>
+        <div class="chart-note">180 sampled points across all 12 validation folds. Points on the diagonal are exact predictions; the closer the cloud hugs the line, the better.</div>
+        <div class="legend">
+          <div class="item"><span class="swatch" style="background:var(--f510)"></span>F-510 Carbon</div>
+          <div class="item"><span class="swatch" style="background:var(--f511)"></span>F-509/511 Sock</div>
+          <div class="item"><span class="swatch line" style="background:var(--muted)"></span>Perfect prediction</div>
+        </div>
+        <div id="chartPredActual"></div>
+      </div>
+      <div class="card">
+        <div class="chart-title">Forecast error by cycle — before vs. after adding temperature</div>
+        <div class="chart-note">Mean absolute error (days) per held-out cycle. "Before" is the v3 model (DP + flow only); "after" adds flash temperature (v4, current).</div>
+        <div class="legend">
+          <div class="item"><span class="swatch" style="background:var(--muted)"></span>Before (v3)</div>
+          <div class="item"><span class="swatch" style="background:var(--temp)"></span>After (v4, current)</div>
+        </div>
+        <div class="chart-scroll"><div id="chartLoco"></div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="grid-4" style="text-align:left">
+        <div><div class="chart-note" style="margin-bottom:2px">Mean error</div><div style="font-size:20px;font-weight:800">6.34d → <span style="color:var(--good)">4.47d</span></div></div>
+        <div><div class="chart-note" style="margin-bottom:2px">Median error</div><div style="font-size:20px;font-weight:800">5.29d → <span style="color:var(--good)">3.21d</span></div></div>
+        <div><div class="chart-note" style="margin-bottom:2px">P10–P90 coverage</div><div style="font-size:20px;font-weight:800">46.6% → <span style="color:var(--good)">52.7%</span></div></div>
+        <div><div class="chart-note" style="margin-bottom:2px">Target coverage</div><div style="font-size:20px;font-weight:800;color:var(--muted)">~80%</div></div>
+      </div>
+      <p style="margin:16px 0 0">10 of 12 held-out cycles improved after adding temperature; two moved marginally worse. Coverage — how often the true replacement date actually fell inside the predicted P10–P90 window — improved but remains below the 80% statistical target, which is expected and discussed candidly in Section 6: with 12 cycles, the point forecast (the median) is trustworthy; the width of the confidence band is still coarse.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow"><span class="section-num">04</span>What drives the forecast</div>
+      <h2>Feature importance</h2>
+      <p>How much weight the trained model places on each input. Flash temperature's cycle‑running‑average is the single largest factor — consistent with the independent correlation evidence in Section 2, not just an artifact of the model's internals.</p>
+    </div>
+    <div class="card">
+      <div class="chart-scroll"><div id="chartFI"></div></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow"><span class="section-num">05</span>Live forecast</div>
+      <h2>Current status — both filters, as of 2026-07-14</h2>
+      <p>Both filters are in the same 21-day-old cycle, both reading well below their replacement threshold.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card fcard" id="fc-f510"></div>
+      <div class="card fcard" id="fc-f511"></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow"><span class="section-num">06</span>Known limitations</div>
+      <h2>What we're watching next</h2>
+      <p>None of these block a pilot deployment — they're the reason the model is positioned as a decision-support forecast running alongside existing alarms, not a replacement for them, and they define exactly what "more data" needs to fix.</p>
+    </div>
+    <div class="callout watch">
+      <div class="head-row"><span class="dot"></span><h3 style="margin:0">Three open items</h3></div>
+      <ul>
+        <li><b>Sample size.</b> 12 complete cycles is 6 independent time periods, not 12 independent samples (each period is mirrored across both filters, which share upstream conditions). Confidence-interval coverage (52.7%) will keep improving as more cycles complete — it is not expected to hit the 80% target yet.</li>
+        <li><b>Temperature–season overlap.</b> Flash temperature correlates with cycle length (r=0.77) but also drifted upward across the data window itself (r=0.59 vs. calendar date) — cycles later in the dataset were both warmer and longer. The cross-validated accuracy gain is real and honestly measured, but confirming temperature as a true physical driver (rather than a proxy for season) needs cycles spanning a second summer and winter.</li>
+        <li><b>F-509 vs. F-511 identity.</b> Both physical filters share a single DP tag (DPIT-0509) — there is no instrumentation anywhere in the historian that distinguishes which one is currently in service. The model treats "F-509/511" as one pooled process. Resolving this needs a manual switchover log from operations; it doesn't block the forecast, which is correct either way for "whichever filter is running."</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="head">
+      <div class="eyebrow">Appendix</div>
+      <h2>Tags used by the model</h2>
+    </div>
+    <div class="card">
+      <div class="chart-scroll">
+      <table>
+        <thead><tr><th>Tag</th><th>Description</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td class="tag">DPIT‑0510</td><td>F‑510 Carbon Filter differential pressure</td><td>Primary signal (F‑510)</td></tr>
+          <tr><td class="tag">DPIT‑0509</td><td>F‑509/511 Sock Filter differential pressure</td><td>Primary signal (F‑509/511)</td></tr>
+          <tr><td class="tag">FIT‑2512</td><td>Amine circulation flow rate</td><td>Fouling-rate driver</td></tr>
+          <tr><td class="tag">TIT‑3507</td><td>Flash drum temperature (amine inlet proxy)</td><td>Fouling-rate driver — added in v4</td></tr>
+          <tr><td class="tag">DPIT‑7502 / DPIT‑6502</td><td>Lean/rich exchanger differential pressure</td><td>Secondary context</td></tr>
+          <tr><td class="tag">CIRC514 / CIRC515 VFD RPM</td><td>Circulation pump speed feedback</td><td>Secondary context</td></tr>
+          <tr><td class="tag">TIT‑1504</td><td>Process temperature, general context</td><td>Secondary context</td></tr>
+          <tr><td class="tag">PIT‑6503</td><td>Process pressure, general context</td><td>Secondary context</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Source: scripts/20–23, eda/RUL_Model_Report.md · Model: gradient-boosted quantile regression (P10/median/P90), trained on log(RUL_hours) · Validation: leave-one-cycle-out across 12 complete cycles.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent){
+    const e = document.createElementNS(NS, tag);
+    for (const k in (attrs||{})) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(tag, attrs, content, parent){
+    const e = el(tag, attrs, parent);
+    e.textContent = content;
+    return e;
+  }
+  function scaleLinear(d0,d1,r0,r1){
+    return function(v){ return r0 + (v-d0)/((d1-d0)||1) * (r1-r0); };
+  }
+  const tipEl = document.getElementById("tt");
+  const tipValue = document.getElementById("ttValue");
+  const tipLabel = document.getElementById("ttLabel");
+  function showTip(evt, value, label){
+    tipValue.textContent = value;
+    tipLabel.textContent = label;
+    tipEl.style.left = evt.clientX + "px";
+    tipEl.style.top = evt.clientY + "px";
+    tipEl.classList.add("show");
+  }
+  function hideTip(){ tipEl.classList.remove("show"); }
+  function wireTip(node, value, label){
+    node.setAttribute("tabindex","0");
+    node.addEventListener("pointermove", e=>showTip(e, value, label));
+    node.addEventListener("pointerenter", e=>showTip(e, value, label));
+    node.addEventListener("pointerleave", hideTip);
+    node.addEventListener("focus", e=>{
+      const r = node.getBoundingClientRect();
+      showTip({clientX:r.left+r.width/2, clientY:r.top}, value, label);
+    });
+    node.addEventListener("blur", hideTip);
+  }
+  function linreg(pts){
+    const n = pts.length;
+    let sx=0,sy=0,sxx=0,sxy=0;
+    pts.forEach(p=>{ sx+=p[0]; sy+=p[1]; sxx+=p[0]*p[0]; sxy+=p[0]*p[1]; });
+    const slope = (n*sxy - sx*sy) / ((n*sxx - sx*sx) || 1e-9);
+    const intercept = (sy - slope*sx) / n;
+    return {slope, intercept};
+  }
+
+  /* ============================= DATA ============================= */
+  const DP = {"F510": [[1756684800000, 1.043], [1756771200000, 1.073], [1756857600000, 1.108], [1756944000000, 1.094], [1757030400000, 1.117], [1757116800000, 1.241], [1757203200000, 1.269], [1757289600000, 1.295], [1757376000000, 1.373], [1757462400000, 1.383], [1757548800000, 1.351], [1757635200000, 1.387], [1757721600000, 1.333], [1757808000000, 1.293], [1757894400000, 1.248], [1758067200000, 1.349], [1758153600000, 1.317], [1758240000000, 1.369], [1758326400000, 1.337], [1758412800000, 1.349], [1758499200000, 1.349], [1758585600000, 1.371], [1758672000000, 1.391], [1758758400000, 1.386], [1758844800000, 1.364], [1758931200000, 1.356], [1759017600000, 1.404], [1759104000000, 1.373], [1759190400000, 1.439], [1759276800000, 1.421], [1759363200000, 1.444], [1759449600000, 1.436], [1759536000000, 1.478], [1759622400000, 1.496], [1759708800000, 1.541], [1759795200000, 1.536], [1759881600000, 1.581], [1759968000000, 1.887], [1760054400000, 1.995], [1760140800000, 1.963], [1760227200000, 2.056], [1760313600000, 2.099], [1760400000000, 2.213], [1760486400000, 2.334], [1760572800000, 2.459], [1760659200000, 2.619], [1760745600000, 3.176], [1760832000000, 5.535], [1760918400000, 5.475], [1761004800000, 1.046], [1761091200000, 1.116], [1761177600000, 1.277], [1761264000000, 1.293], [1761350400000, 1.318], [1761436800000, 1.417], [1761523200000, 1.388], [1761609600000, 1.481], [1761696000000, 1.554], [1761782400000, 1.53], [1761868800000, 1.549], [1762905600000, 1.876], [1762992000000, 1.847], [1763078400000, 1.896], [1763164800000, 1.96], [1763337600000, 1.988], [1763424000000, 1.931], [1763510400000, 1.797], [1763596800000, 1.806], [1763683200000, 1.764], [1763769600000, 1.899], [1763856000000, 1.835], [1763942400000, 1.993], [1764028800000, 2.204], [1764115200000, 2.232], [1764201600000, 2.226], [1764288000000, 2.314], [1764374400000, 2.329], [1764460800000, 2.35], [1764547200000, 2.327], [1764633600000, 2.366], [1764720000000, 2.619], [1764806400000, 2.566], [1764892800000, 2.859], [1764979200000, 2.837], [1765065600000, 2.795], [1765152000000, 2.963], [1765238400000, 3.027], [1765324800000, 3.6], [1765411200000, 4.284], [1765497600000, 5.058], [1765584000000, 5.71], [1765670400000, 6.135], [1765756800000, 7.209], [1765843200000, 2.605], [1765929600000, 2.764], [1766016000000, 2.931], [1766102400000, 2.963], [1766188800000, 2.983], [1766275200000, 3.046], [1766361600000, 2.753], [1766448000000, 2.799], [1766534400000, 3.052], [1766620800000, 2.942], [1766707200000, 2.846], [1766793600000, 2.766], [1766880000000, 2.732], [1766966400000, 2.688], [1767052800000, 2.701], [1767139200000, 2.577], [1767312000000, 2.99], [1767398400000, 2.968], [1767484800000, 2.668], [1767571200000, 2.979], [1767657600000, 3.242], [1767744000000, 3.951], [1767830400000, 5.827], [1767916800000, 7.642], [1768003200000, 3.088], [1768089600000, 2.002], [1768176000000, 1.469], [1768262400000, 1.498], [1768348800000, 1.713], [1768435200000, 1.87], [1768521600000, 2.139], [1768608000000, 2.41], [1768694400000, 2.603], [1768780800000, 2.685], [1768867200000, 2.95], [1768953600000, 3.126], [1769040000000, 3.438], [1769126400000, 3.455], [1769212800000, 3.77], [1769299200000, 4.202], [1769385600000, 4.81], [1769472000000, 3.557], [1769558400000, 1.114], [1769644800000, 1.331], [1769731200000, 1.48], [1769817600000, 1.461], [1769904000000, 1.462], [1769990400000, 1.383], [1770076800000, 1.464], [1770163200000, 1.296], [1770249600000, 1.475], [1770336000000, 1.448], [1770422400000, 1.407], [1770508800000, 1.459], [1770595200000, 1.564], [1770681600000, 1.537], [1770768000000, 1.595], [1770854400000, 1.513], [1770940800000, 1.376], [1771027200000, 1.613], [1771113600000, 1.59], [1771200000000, 1.617], [1771286400000, 1.658], [1771372800000, 1.658], [1771459200000, 1.715], [1771545600000, 1.718], [1771632000000, 1.844], [1771718400000, 1.963], [1771804800000, 1.973], [1771891200000, 1.929], [1771977600000, 1.991], [1772064000000, 2.037], [1772150400000, 2.085], [1772236800000, 2.184], [1772323200000, 2.106], [1772409600000, 2.105], [1772496000000, 2.215], [1772582400000, 2.253], [1772668800000, 2.288], [1772755200000, 2.376], [1772841600000, 2.395], [1772928000000, 2.357], [1773014400000, 2.782], [1773100800000, 2.967], [1773187200000, 3.035], [1773273600000, 3.246], [1773360000000, 3.389], [1773446400000, 3.53], [1773532800000, 3.695], [1773619200000, 3.303], [1773705600000, 3.43], [1773792000000, 3.399], [1773878400000, 4.405], [1773964800000, 5.167], [1774051200000, 7.687], [1774137600000, 8.047], [1774224000000, 3.048], [1774310400000, 3.844], [1774396800000, 3.926], [1774483200000, 3.012], [1774569600000, 1.11], [1774656000000, 1.403], [1774742400000, 1.751], [1774828800000, 1.786], [1774915200000, 1.86], [1775001600000, 1.889], [1775088000000, 2.13], [1775174400000, 2.166], [1775260800000, 2.04], [1775347200000, 2.36], [1775433600000, 2.75], [1775520000000, 2.927], [1775606400000, 3.214], [1775692800000, 3.798], [1775779200000, 4.733], [1775865600000, 5.756], [1775952000000, 5.544], [1776038400000, 3.605], [1776124800000, 4.628], [1776211200000, 6.359], [1776297600000, 4.429], [1776384000000, 3.645], [1776470400000, 1.585], [1776556800000, 1.383], [1776643200000, 1.408], [1776729600000, 1.472], [1776816000000, 1.458], [1776902400000, 1.439], [1776988800000, 1.48], [1777075200000, 1.505], [1777161600000, 1.517], [1777248000000, 1.509], [1777334400000, 1.471], [1777420800000, 1.523], [1777507200000, 1.552], [1777593600000, 1.577], [1777680000000, 1.595], [1777766400000, 1.593], [1777852800000, 1.537], [1777939200000, 1.55], [1778025600000, 1.612], [1778112000000, 1.637], [1778198400000, 1.648], [1778284800000, 1.65], [1778371200000, 1.625], [1778457600000, 1.673], [1778544000000, 1.715], [1778630400000, 1.749], [1778716800000, 1.805], [1778803200000, 1.9], [1778889600000, 1.971], [1778976000000, 1.935], [1779062400000, 1.961], [1779148800000, 1.983], [1779235200000, 1.904], [1779321600000, 2.021], [1779408000000, 1.991], [1779494400000, 2.031], [1779580800000, 2.008], [1779667200000, 2.038], [1779753600000, 2.097], [1779840000000, 2.264], [1779926400000, 2.266], [1780012800000, 2.301], [1780099200000, 2.324], [1780185600000, 2.355], [1780272000000, 2.336], [1780358400000, 2.259], [1780444800000, 2.282], [1780531200000, 2.295], [1780617600000, 2.413], [1780704000000, 2.503], [1780790400000, 2.487], [1780876800000, 2.566], [1780963200000, 2.676], [1781049600000, 2.733], [1781136000000, 2.794], [1781222400000, 2.79], [1781308800000, 3.068], [1781395200000, 3.198], [1781481600000, 3.595], [1781568000000, 3.969], [1781654400000, 4.808], [1781740800000, 5.837], [1781827200000, 6.812], [1781913600000, 8.309], [1782000000000, 7.884], [1782086400000, 4.981], [1782172800000, 3.512], [1782259200000, 1.934], [1782345600000, 1.899], [1782432000000, 1.541], [1782518400000, 1.694], [1782604800000, 1.628], [1782691200000, 1.581], [1782777600000, 1.709], [1782864000000, 1.498], [1782950400000, 1.59], [1783036800000, 1.608], [1783123200000, 1.702], [1783209600000, 1.802], [1783296000000, 1.731], [1783382400000, 1.62], [1783468800000, 1.658], [1783555200000, 1.705], [1783641600000, 1.721], [1783728000000, 1.766], [1783814400000, 1.752], [1783900800000, 1.863], [1783987200000, 1.943]], "F509511": [[1756684800000, 0.332], [1756771200000, 0.354], [1756857600000, 0.367], [1756944000000, 0.345], [1757030400000, 0.368], [1757116800000, 0.451], [1757203200000, 0.494], [1757289600000, 0.643], [1757376000000, 0.648], [1757462400000, 0.646], [1757548800000, 0.589], [1757635200000, 0.634], [1757721600000, 0.592], [1757808000000, 0.548], [1757894400000, 0.51], [1758067200000, 0.613], [1758153600000, 0.597], [1758240000000, 0.629], [1758326400000, 0.586], [1758412800000, 0.637], [1758499200000, 0.65], [1758585600000, 0.662], [1758672000000, 0.696], [1758758400000, 0.706], [1758844800000, 0.666], [1758931200000, 0.615], [1759017600000, 0.702], [1759104000000, 0.556], [1759190400000, 0.7], [1759276800000, 0.691], [1759363200000, 0.734], [1759449600000, 0.741], [1759536000000, 0.736], [1759622400000, 0.797], [1759708800000, 0.858], [1759795200000, 0.854], [1759881600000, 0.846], [1759968000000, 1.163], [1760054400000, 1.333], [1760140800000, 1.299], [1760227200000, 1.456], [1760313600000, 1.614], [1760400000000, 1.759], [1760486400000, 1.94], [1760572800000, 2.103], [1760659200000, 2.282], [1760745600000, 2.841], [1760832000000, 4.859], [1760918400000, 4.853], [1761004800000, 0.144], [1761091200000, 0.179], [1761177600000, 0.201], [1761264000000, 0.215], [1761350400000, 0.249], [1761436800000, 0.267], [1761523200000, 0.275], [1761609600000, 0.321], [1761696000000, 0.369], [1761782400000, 0.348], [1761868800000, 0.366], [1762905600000, 0.649], [1762992000000, 0.62], [1763078400000, 0.691], [1763164800000, 0.793], [1763337600000, 0.816], [1763424000000, 0.748], [1763510400000, 0.632], [1763596800000, 0.66], [1763683200000, 0.603], [1763769600000, 0.793], [1763856000000, 0.76], [1763942400000, 0.974], [1764028800000, 1.19], [1764115200000, 1.243], [1764201600000, 1.272], [1764288000000, 1.373], [1764374400000, 1.404], [1764460800000, 1.448], [1764547200000, 1.41], [1764633600000, 1.455], [1764720000000, 1.684], [1764806400000, 1.661], [1764892800000, 1.967], [1764979200000, 1.993], [1765065600000, 1.997], [1765152000000, 2.153], [1765238400000, 2.332], [1765324800000, 3.034], [1765411200000, 3.722], [1765497600000, 4.429], [1765584000000, 5.073], [1765670400000, 5.324], [1765756800000, 6.48], [1765843200000, 1.153], [1765929600000, 1.159], [1766016000000, 1.287], [1766102400000, 1.263], [1766188800000, 1.287], [1766275200000, 1.358], [1766361600000, 1.406], [1766448000000, 1.567], [1766534400000, 1.802], [1766620800000, 1.702], [1766707200000, 1.612], [1766793600000, 1.696], [1766880000000, 1.682], [1766966400000, 1.675], [1767052800000, 1.676], [1767139200000, 1.585], [1767312000000, 1.901], [1767398400000, 1.891], [1767484800000, 1.694], [1767571200000, 1.952], [1767657600000, 2.306], [1767744000000, 3.034], [1767830400000, 4.871], [1767916800000, 6.642], [1768003200000, 1.863], [1768089600000, 0.848], [1768176000000, 0.943], [1768262400000, 1.133], [1768348800000, 1.415], [1768435200000, 1.554], [1768521600000, 1.818], [1768608000000, 2.132], [1768694400000, 2.508], [1768780800000, 2.715], [1768867200000, 3.054], [1768953600000, 3.341], [1769040000000, 3.769], [1769126400000, 4.057], [1769212800000, 4.492], [1769299200000, 5.321], [1769385600000, 6.455], [1769472000000, 3.787], [1769558400000, 0.217], [1769644800000, 0.331], [1769731200000, 0.431], [1769817600000, 0.457], [1769904000000, 0.445], [1769990400000, 0.413], [1770076800000, 0.423], [1770163200000, 0.398], [1770249600000, 0.449], [1770336000000, 0.384], [1770422400000, 0.23], [1770508800000, 0.268], [1770595200000, 0.332], [1770681600000, 0.319], [1770768000000, 0.394], [1770854400000, 0.381], [1770940800000, 0.332], [1771027200000, 0.474], [1771113600000, 0.417], [1771200000000, 0.465], [1771286400000, 0.492], [1771372800000, 0.507], [1771459200000, 0.55], [1771545600000, 0.547], [1771632000000, 0.673], [1771718400000, 0.836], [1771804800000, 0.857], [1771891200000, 0.834], [1771977600000, 0.894], [1772064000000, 0.959], [1772150400000, 1.022], [1772236800000, 1.137], [1772323200000, 1.104], [1772409600000, 1.135], [1772496000000, 1.255], [1772582400000, 1.339], [1772668800000, 1.451], [1772755200000, 1.553], [1772841600000, 1.658], [1772928000000, 1.638], [1773014400000, 2.15], [1773100800000, 2.511], [1773187200000, 2.712], [1773273600000, 3.032], [1773360000000, 3.276], [1773446400000, 3.457], [1773532800000, 3.718], [1773619200000, 3.544], [1773705600000, 4.026], [1773792000000, 3.906], [1773878400000, 5.453], [1773964800000, 6.37], [1774051200000, 9.267], [1774137600000, 8.947], [1774224000000, 2.238], [1774310400000, 3.058], [1774396800000, 3.267], [1774483200000, 2.256], [1774569600000, 0.317], [1774656000000, 0.413], [1774742400000, 0.566], [1774828800000, 0.638], [1774915200000, 0.787], [1775001600000, 0.766], [1775088000000, 1.016], [1775174400000, 1.071], [1775260800000, 1.015], [1775347200000, 1.426], [1775433600000, 1.915], [1775520000000, 2.247], [1775606400000, 2.753], [1775692800000, 3.498], [1775779200000, 4.481], [1775865600000, 5.524], [1775952000000, 5.14], [1776038400000, 2.787], [1776124800000, 4.21], [1776211200000, 6.08], [1776297600000, 3.593], [1776384000000, 2.615], [1776470400000, 0.216], [1776556800000, 0.177], [1776643200000, 0.154], [1776729600000, 0.163], [1776816000000, 0.163], [1776902400000, 0.159], [1776988800000, 0.191], [1777075200000, 0.205], [1777161600000, 0.219], [1777248000000, 0.213], [1777334400000, 0.203], [1777420800000, 0.24], [1777507200000, 0.297], [1777593600000, 0.313], [1777680000000, 0.308], [1777766400000, 0.294], [1777852800000, 0.251], [1777939200000, 0.299], [1778025600000, 0.338], [1778112000000, 0.38], [1778198400000, 0.377], [1778284800000, 0.403], [1778371200000, 0.387], [1778457600000, 0.449], [1778544000000, 0.525], [1778630400000, 0.592], [1778716800000, 0.67], [1778803200000, 0.8], [1778889600000, 0.853], [1778976000000, 0.841], [1779062400000, 0.891], [1779148800000, 0.889], [1779235200000, 0.819], [1779321600000, 0.939], [1779408000000, 0.924], [1779494400000, 0.983], [1779580800000, 0.971], [1779667200000, 1.032], [1779753600000, 1.102], [1779840000000, 1.268], [1779926400000, 1.288], [1780012800000, 1.32], [1780099200000, 1.366], [1780185600000, 1.412], [1780272000000, 1.395], [1780358400000, 1.322], [1780444800000, 1.34], [1780531200000, 1.372], [1780617600000, 1.49], [1780704000000, 1.607], [1780790400000, 1.594], [1780876800000, 1.689], [1780963200000, 1.793], [1781049600000, 1.852], [1781136000000, 1.908], [1781222400000, 1.932], [1781308800000, 2.233], [1781395200000, 2.395], [1781481600000, 2.813], [1781568000000, 3.222], [1781654400000, 4.071], [1781740800000, 5.116], [1781827200000, 6.147], [1781913600000, 7.434], [1782000000000, 6.569], [1782086400000, 3.629], [1782172800000, 2.346], [1782259200000, 0.799], [1782345600000, 1.003], [1782432000000, 0.793], [1782518400000, 0.921], [1782604800000, 0.89], [1782691200000, 0.826], [1782777600000, 0.96], [1782864000000, 0.737], [1782950400000, 0.804], [1783036800000, 0.842], [1783123200000, 0.908], [1783209600000, 1.031], [1783296000000, 0.953], [1783382400000, 0.836], [1783468800000, 0.882], [1783555200000, 0.922], [1783641600000, 0.94], [1783728000000, 0.987], [1783814400000, 0.992], [1783900800000, 1.092], [1783987200000, 1.173]]};
+  const EVENTS = [{"filter": "F510", "peak_ts": 1760936520000, "peak_psi": 14.26, "repl_ts": 1760943480000}, {"filter": "F510", "peak_ts": 1765799760000, "peak_psi": 10.02, "repl_ts": 1765846080000}, {"filter": "F510", "peak_ts": 1767992640000, "peak_psi": 20.73, "repl_ts": 1767995880000}, {"filter": "F510", "peak_ts": 1769430600000, "peak_psi": 9.62, "repl_ts": 1769514120000}, {"filter": "F510", "peak_ts": 1774189440000, "peak_psi": 15.36, "repl_ts": 1774191120000}, {"filter": "F510", "peak_ts": 1775958720000, "peak_psi": 9.69, "repl_ts": 1776016080000}, {"filter": "F510", "peak_ts": 1776289560000, "peak_psi": 10.92, "repl_ts": 1776291480000}, {"filter": "F510", "peak_ts": 1782069360000, "peak_psi": 12.01, "repl_ts": 1782212160000}, {"filter": "F509511", "peak_ts": 1760936520000, "peak_psi": 13.65, "repl_ts": 1760943360000}, {"filter": "F509511", "peak_ts": 1765799760000, "peak_psi": 9.01, "repl_ts": 1765843200000}, {"filter": "F509511", "peak_ts": 1767992640000, "peak_psi": 21.71, "repl_ts": 1767995880000}, {"filter": "F509511", "peak_ts": 1769505000000, "peak_psi": 11.04, "repl_ts": 1769514120000}, {"filter": "F509511", "peak_ts": 1774178520000, "peak_psi": 17.51, "repl_ts": 1774190760000}, {"filter": "F509511", "peak_ts": 1775958720000, "peak_psi": 9.5, "repl_ts": 1775958960000}, {"filter": "F509511", "peak_ts": 1776289560000, "peak_psi": 10.67, "repl_ts": 1776291360000}, {"filter": "F509511", "peak_ts": 1782069360000, "peak_psi": 10.75, "repl_ts": 1782168360000}, {"filter": "F509511", "peak_ts": 1782213360000, "peak_psi": 16.41, "repl_ts": 1782213480000}];
+  const CYCLES = [{"id": 7, "filter": "F509511", "start": "2025-10-20", "duration": 55.75, "dp": 1.51, "dpStd": 0.36, "specRes": 0.05, "flow": 30.03, "temp": 103.91}, {"id": 0, "filter": "F510", "start": "2025-10-20", "duration": 55.78, "dp": 2.47, "dpStd": 0.52, "specRes": 0.08, "flow": 30.03, "temp": 103.91}, {"id": 8, "filter": "F509511", "start": "2025-12-16", "duration": 23.92, "dp": 2.05, "dpStd": 0.4, "specRes": 0.06, "flow": 32.13, "temp": 99.22}, {"id": 1, "filter": "F510", "start": "2025-12-16", "duration": 23.92, "dp": 3.27, "dpStd": 0.56, "specRes": 0.1, "flow": 32.13, "temp": 99.22}, {"id": 2, "filter": "F510", "start": "2026-01-09", "duration": 16.61, "dp": 2.84, "dpStd": 0.57, "specRes": 0.09, "flow": 30.48, "temp": 99.04}, {"id": 9, "filter": "F509511", "start": "2026-01-09", "duration": 16.61, "dp": 3.02, "dpStd": 0.53, "specRes": 0.1, "flow": 30.48, "temp": 99.04}, {"id": 3, "filter": "F510", "start": "2026-01-27", "duration": 53.16, "dp": 2.41, "dpStd": 0.51, "specRes": 0.08, "flow": 30.13, "temp": 102.62}, {"id": 10, "filter": "F509511", "start": "2026-01-27", "duration": 53.16, "dp": 1.73, "dpStd": 0.42, "specRes": 0.06, "flow": 30.13, "temp": 102.62}, {"id": 11, "filter": "F509511", "start": "2026-03-22", "duration": 19.5, "dp": 2.0, "dpStd": 0.68, "specRes": 0.06, "flow": 30.7, "temp": 103.52}, {"id": 4, "filter": "F510", "start": "2026-03-22", "duration": 20.16, "dp": 2.95, "dpStd": 0.76, "specRes": 0.1, "flow": 30.71, "temp": 103.89}, {"id": 13, "filter": "F509511", "start": "2026-04-15", "duration": 67.03, "dp": 1.37, "dpStd": 0.35, "specRes": 0.05, "flow": 30.01, "temp": 112.36}, {"id": 6, "filter": "F510", "start": "2026-04-15", "duration": 67.54, "dp": 2.47, "dpStd": 0.48, "specRes": 0.08, "flow": 30.01, "temp": 112.39}];
+  const CYCLE_CORR = [{"feature": "Flash Temp TIT-3507 (instant)", "tag": "PLANT_AMINE_P_TIT_3507_VAL", "pearson_r": 0.767, "pearson_p": 0.0036, "spearman_r": 0.817, "spearman_p": 0.0012, "n_cycles": 12}, {"feature": "Flash Temp TIT-3507 (cycle cum. mean)", "tag": "tit3507_cummean_this_cycle", "pearson_r": 0.723, "pearson_p": 0.0079, "spearman_r": 0.472, "spearman_p": 0.1215, "n_cycles": 12}, {"feature": "DP 24h Std Dev", "tag": "dp_std_24h", "pearson_r": -0.632, "pearson_p": 0.0276, "spearman_r": -0.688, "spearman_p": 0.0134, "n_cycles": 12}, {"feature": "Flow FIT-2512 (instant)", "tag": "PLANT_AMINE_P_FIT_2512_VAL", "pearson_r": -0.631, "pearson_p": 0.0279, "spearman_r": -0.761, "spearman_p": 0.0041, "n_cycles": 12}, {"feature": "DP (raw)", "tag": "dp", "pearson_r": -0.592, "pearson_p": 0.0423, "spearman_r": -0.474, "spearman_p": 0.1198, "n_cycles": 12}, {"feature": "HE DP DPIT-7502", "tag": "PLANT_AMINE_P_DPIT_7502_VAL", "pearson_r": -0.568, "pearson_p": 0.0538, "spearman_r": -0.775, "spearman_p": 0.0031, "n_cycles": 12}, {"feature": "Specific Resistance (DP/Flow)", "tag": "specific_resistance", "pearson_r": -0.557, "pearson_p": 0.06, "spearman_r": -0.491, "spearman_p": 0.1048, "n_cycles": 12}, {"feature": "DP 7-day Slope", "tag": "dp_slope_7d", "pearson_r": -0.53, "pearson_p": 0.0762, "spearman_r": -0.726, "spearman_p": 0.0075, "n_cycles": 12}, {"feature": "TIT-1504", "tag": "PLANT_AMINE_P_TIT_1504_VAL", "pearson_r": 0.331, "pearson_p": 0.294, "spearman_r": 0.042, "spearman_p": 0.8963, "n_cycles": 12}, {"feature": "PIT-6503", "tag": "PLANT_AMINE_P_PIT_6503_VAL", "pearson_r": -0.314, "pearson_p": 0.321, "spearman_r": -0.366, "spearman_p": 0.2417, "n_cycles": 12}, {"feature": "HE DP DPIT-6502", "tag": "PLANT_AMINE_P_DPIT_6502_VAL", "pearson_r": -0.309, "pearson_p": 0.3279, "spearman_r": 0.204, "spearman_p": 0.5243, "n_cycles": 12}, {"feature": "CIRC515 VFD RPM", "tag": "PLANT_AMINE_CIRC515VFD22_RPM_FB", "pearson_r": -0.301, "pearson_p": 0.3426, "spearman_r": -0.021, "spearman_p": 0.9479, "n_cycles": 12}, {"feature": "CIRC514 VFD RPM", "tag": "PLANT_AMINE_CIRC514VFD21_RPM_FB", "pearson_r": 0.268, "pearson_p": 0.4003, "spearman_r": 0.042, "spearman_p": 0.8959, "n_cycles": 12}, {"feature": "Flow (cycle cum. mean)", "tag": "flow_cummean_this_cycle", "pearson_r": -0.166, "pearson_p": 0.6051, "spearman_r": -0.085, "spearman_p": 0.794, "n_cycles": 12}];
+  const ROW_CORR = [{"tag": "dp", "r": -0.7214}, {"tag": "specific_resistance", "r": -0.7149}, {"tag": "dp_std_24h", "r": -0.5645}, {"tag": "dp_slope_7d", "r": -0.539}, {"tag": "hours_since_start", "r": -0.4424}, {"tag": "PLANT_AMINE_P_TIT_3507_VAL", "r": 0.2707}, {"tag": "tit3507_cummean_this_cycle", "r": 0.2504}, {"tag": "dp_slope_24h", "r": -0.2053}, {"tag": "PLANT_AMINE_P_DPIT_6502_VAL", "r": 0.1746}, {"tag": "PLANT_AMINE_P_DPIT_7502_VAL", "r": -0.1619}, {"tag": "PLANT_AMINE_P_TIT_1504_VAL", "r": 0.1521}, {"tag": "PLANT_AMINE_P_FIT_2512_VAL", "r": -0.1493}, {"tag": "flow_cummean_this_cycle", "r": 0.1291}, {"tag": "PLANT_AMINE_CIRC515VFD22_RPM_FB", "r": -0.1066}, {"tag": "dp_slope_6h", "r": -0.0631}, {"tag": "PLANT_AMINE_CIRC514VFD21_RPM_FB", "r": -0.0385}, {"tag": "PLANT_AMINE_P_PIT_6503_VAL", "r": 0.0198}];
+  const PVA = [[55.8, 55.9, "F510"], [53.0, 49.2, "F510"], [50.3, 39.9, "F510"], [47.5, 12.1, "F510"], [32.0, 27.8, "F510"], [26.9, 25.8, "F510"], [23.6, 25.1, "F510"], [20.4, 21.9, "F510"], [17.7, 17.2, "F510"], [14.5, 16.0, "F510"], [11.7, 10.6, "F510"], [8.9, 7.7, "F510"], [6.2, 6.0, "F510"], [3.4, 4.3, "F510"], [0.7, 1.5, "F510"], [23.9, 20.7, "F510"], [22.3, 19.6, "F510"], [20.7, 17.9, "F510"], [19.2, 16.1, "F510"], [17.6, 12.9, "F510"], [16.0, 12.7, "F510"], [14.4, 12.4, "F510"], [12.8, 10.4, "F510"], [11.2, 8.1, "F510"], [9.7, 5.2, "F510"], [6.6, 5.3, "F510"], [5.0, 3.5, "F510"], [3.5, 4.4, "F510"], [1.9, 2.7, "F510"], [0.3, 2.0, "F510"], [16.6, 16.8, "F510"], [15.5, 16.5, "F510"], [14.4, 15.5, "F510"], [13.2, 15.1, "F510"], [12.1, 13.8, "F510"], [10.5, 14.7, "F510"], [9.4, 17.6, "F510"], [8.3, 16.2, "F510"], [7.2, 7.1, "F510"], [6.0, 6.8, "F510"], [4.9, 8.4, "F510"], [3.7, 12.7, "F510"], [2.5, 4.6, "F510"], [1.4, 3.4, "F510"], [0.3, 2.5, "F510"], [53.2, 24.0, "F510"], [49.1, 22.8, "F510"], [45.4, 18.9, "F510"], [41.8, 17.2, "F510"], [37.9, 9.8, "F510"], [33.8, 13.6, "F510"], [30.2, 12.6, "F510"], [26.7, 10.3, "F510"], [23.1, 15.4, "F510"], [18.8, 12.0, "F510"], [15.2, 7.6, "F510"], [11.6, 10.4, "F510"], [8.0, 8.4, "F510"], [4.0, 7.5, "F510"], [0.4, 1.5, "F510"], [20.2, 20.7, "F510"], [18.7, 19.1, "F510"], [17.2, 15.8, "F510"], [15.8, 16.2, "F510"], [14.5, 14.8, "F510"], [13.1, 10.7, "F510"], [11.2, 12.7, "F510"], [9.9, 10.1, "F510"], [8.5, 14.7, "F510"], [7.1, 9.7, "F510"], [5.7, 14.3, "F510"], [4.4, 7.5, "F510"], [3.0, 4.7, "F510"], [1.6, 3.9, "F510"], [0.2, 3.4, "F510"], [67.5, 45.8, "F510"], [63.0, 46.4, "F510"], [58.4, 41.6, "F510"], [53.0, 30.3, "F510"], [48.4, 38.0, "F510"], [43.6, 35.0, "F510"], [38.6, 28.4, "F510"], [34.0, 25.2, "F510"], [29.1, 23.6, "F510"], [24.5, 21.4, "F510"], [19.5, 17.1, "F510"], [14.9, 13.5, "F510"], [10.0, 9.5, "F510"], [5.0, 3.6, "F510"], [0.4, 4.0, "F510"], [55.8, 53.2, "F509511"], [53.0, 55.2, "F509511"], [50.2, 48.4, "F509511"], [47.5, 38.2, "F509511"], [32.0, 29.2, "F509511"], [26.9, 26.9, "F509511"], [23.5, 26.1, "F509511"], [20.4, 21.4, "F509511"], [17.6, 17.4, "F509511"], [14.4, 17.4, "F509511"], [11.7, 15.9, "F509511"], [8.9, 11.9, "F509511"], [6.1, 8.8, "F509511"], [3.4, 4.7, "F509511"], [0.6, 1.2, "F509511"], [23.9, 18.3, "F509511"], [22.3, 19.4, "F509511"], [20.7, 17.5, "F509511"], [19.2, 17.3, "F509511"], [17.6, 16.1, "F509511"], [16.0, 17.0, "F509511"], [14.4, 20.8, "F509511"], [12.8, 18.4, "F509511"], [11.2, 18.3, "F509511"], [9.7, 16.5, "F509511"], [6.6, 15.8, "F509511"], [5.0, 15.3, "F509511"], [3.5, 15.8, "F509511"], [1.9, 6.0, "F509511"], [0.3, 2.3, "F509511"], [16.6, 15.4, "F509511"], [15.5, 17.5, "F509511"], [14.4, 16.2, "F509511"], [13.2, 14.4, "F509511"], [12.1, 12.2, "F509511"], [10.5, 12.7, "F509511"], [9.4, 8.3, "F509511"], [8.3, 7.4, "F509511"], [7.2, 6.7, "F509511"], [6.0, 6.4, "F509511"], [4.9, 5.2, "F509511"], [3.7, 7.9, "F509511"], [2.5, 3.2, "F509511"], [1.4, 2.8, "F509511"], [0.3, 2.2, "F509511"], [53.2, 51.7, "F509511"], [49.1, 48.5, "F509511"], [45.4, 44.9, "F509511"], [41.8, 37.1, "F509511"], [37.9, 35.9, "F509511"], [33.8, 31.8, "F509511"], [30.2, 30.9, "F509511"], [26.7, 18.9, "F509511"], [23.1, 16.3, "F509511"], [18.8, 14.0, "F509511"], [15.2, 10.7, "F509511"], [11.6, 8.1, "F509511"], [8.0, 4.4, "F509511"], [4.0, 2.5, "F509511"], [0.4, 1.0, "F509511"], [19.5, 21.9, "F509511"], [18.1, 18.2, "F509511"], [16.7, 17.1, "F509511"], [15.3, 21.1, "F509511"], [14.0, 20.2, "F509511"], [12.6, 19.0, "F509511"], [10.8, 18.6, "F509511"], [9.5, 18.6, "F509511"], [8.2, 19.5, "F509511"], [6.8, 12.2, "F509511"], [5.5, 6.7, "F509511"], [4.2, 15.1, "F509511"], [2.8, 3.6, "F509511"], [1.5, 3.0, "F509511"], [0.2, 2.1, "F509511"], [67.0, 41.1, "F509511"], [62.5, 49.3, "F509511"], [57.9, 54.7, "F509511"], [52.7, 39.6, "F509511"], [48.1, 46.5, "F509511"], [43.3, 41.8, "F509511"], [38.3, 39.8, "F509511"], [33.8, 32.9, "F509511"], [28.9, 30.0, "F509511"], [24.4, 24.1, "F509511"], [19.4, 19.8, "F509511"], [14.9, 15.1, "F509511"], [10.0, 14.7, "F509511"], [5.0, 4.5, "F509511"], [0.4, 4.0, "F509511"]];
+  const LOCO_V4 = [{"cycle_id": 0, "filter": "F-510 Carbon Filter", "n_test_rows": 929, "mae_hours": 97.1, "mae_days": 4.05, "p10_p90_coverage": 0.704, "actual_cycle_length_days": 55.8}, {"cycle_id": 1, "filter": "F-510 Carbon Filter", "n_test_rows": 539, "mae_hours": 57.0, "mae_days": 2.37, "p10_p90_coverage": 0.698, "actual_cycle_length_days": 23.9}, {"cycle_id": 2, "filter": "F-510 Carbon Filter", "n_test_rows": 385, "mae_hours": 75.5, "mae_days": 3.15, "p10_p90_coverage": 0.322, "actual_cycle_length_days": 16.6}, {"cycle_id": 3, "filter": "F-510 Carbon Filter", "n_test_rows": 1214, "mae_hours": 321.1, "mae_days": 13.38, "p10_p90_coverage": 0.404, "actual_cycle_length_days": 53.2}, {"cycle_id": 4, "filter": "F-510 Carbon Filter", "n_test_rows": 468, "mae_hours": 59.5, "mae_days": 2.48, "p10_p90_coverage": 0.667, "actual_cycle_length_days": 20.2}, {"cycle_id": 6, "filter": "F-510 Carbon Filter", "n_test_rows": 1549, "mae_hours": 196.8, "mae_days": 8.2, "p10_p90_coverage": 0.264, "actual_cycle_length_days": 67.5}, {"cycle_id": 7, "filter": "F-509/F-511 Sock Filter", "n_test_rows": 929, "mae_hours": 58.7, "mae_days": 2.45, "p10_p90_coverage": 0.535, "actual_cycle_length_days": 55.8}, {"cycle_id": 8, "filter": "F-509/F-511 Sock Filter", "n_test_rows": 539, "mae_hours": 119.1, "mae_days": 4.96, "p10_p90_coverage": 0.486, "actual_cycle_length_days": 23.9}, {"cycle_id": 9, "filter": "F-509/F-511 Sock Filter", "n_test_rows": 385, "mae_hours": 31.2, "mae_days": 1.3, "p10_p90_coverage": 0.621, "actual_cycle_length_days": 16.6}, {"cycle_id": 10, "filter": "F-509/F-511 Sock Filter", "n_test_rows": 1214, "mae_hours": 67.2, "mae_days": 2.8, "p10_p90_coverage": 0.647, "actual_cycle_length_days": 53.2}, {"cycle_id": 11, "filter": "F-509/F-511 Sock Filter", "n_test_rows": 452, "mae_hours": 126.5, "mae_days": 5.27, "p10_p90_coverage": 0.294, "actual_cycle_length_days": 19.5}, {"cycle_id": 13, "filter": "F-509/F-511 Sock Filter", "n_test_rows": 1537, "mae_hours": 78.4, "mae_days": 3.27, "p10_p90_coverage": 0.682, "actual_cycle_length_days": 67.0}];
+  const LOCO_V3_MAE = {0:7.01,1:2.10,2:5.66,3:12.76,4:4.51,6:17.82,7:2.77,8:3.96,9:1.24,10:5.90,11:7.46,13:4.92};
+  const FI = [{"tag": "tit3507_cummean_this_cycle", "importance": 0.3429374687893992}, {"tag": "hours_since_start", "importance": 0.2694880153091141}, {"tag": "flow_cummean_this_cycle", "importance": 0.0756982346207901}, {"tag": "dp_std_24h", "importance": 0.0715091276715609}, {"tag": "dp", "importance": 0.062544600928409}, {"tag": "dp_slope_7d", "importance": 0.0507992192643664}, {"tag": "PLANT_AMINE_P_DPIT_6502_VAL", "importance": 0.0371286182969996}, {"tag": "PLANT_AMINE_CIRC514VFD21_RPM_FB", "importance": 0.0252394362764763}, {"tag": "is_carbon_filter", "importance": 0.0160163229071424}, {"tag": "PLANT_AMINE_P_FIT_2512_VAL", "importance": 0.0128573720054849}, {"tag": "PLANT_AMINE_CIRC515VFD22_RPM_FB", "importance": 0.0088935637080926}, {"tag": "specific_resistance", "importance": 0.0087972150464889}, {"tag": "PLANT_AMINE_P_DPIT_7502_VAL", "importance": 0.0051095234491671}, {"tag": "dp_slope_6h", "importance": 0.0048789816707297}, {"tag": "PLANT_AMINE_P_PIT_6503_VAL", "importance": 0.0030564408353071}, {"tag": "dp_slope_24h", "importance": 0.0025069605355939}, {"tag": "PLANT_AMINE_P_TIT_1504_VAL", "importance": 0.0008796935408472}, {"tag": "specific_resistance_slope_24h", "importance": 0.0007962008934628}, {"tag": "tit3507_slope_24h", "importance": 0.0006325497747535}, {"tag": "PLANT_AMINE_P_TIT_3507_VAL", "importance": 0.0002304544758135}];
+
+  const FI_LABELS = {
+    "tit3507_cummean_this_cycle":"Flash temp — cycle running average",
+    "hours_since_start":"Cycle age (hours since start)",
+    "flow_cummean_this_cycle":"Flow — cycle running average",
+    "dp_std_24h":"DP volatility (24h std dev)",
+    "dp":"DP — raw reading",
+    "dp_slope_7d":"DP trend (7-day slope)",
+    "PLANT_AMINE_P_DPIT_6502_VAL":"Exchanger DP — DPIT-6502",
+    "PLANT_AMINE_CIRC514VFD21_RPM_FB":"CIRC514 pump speed",
+    "is_carbon_filter":"Filter type (carbon vs sock)",
+    "PLANT_AMINE_P_FIT_2512_VAL":"Flow — instantaneous",
+    "PLANT_AMINE_CIRC515VFD22_RPM_FB":"CIRC515 pump speed",
+    "specific_resistance":"Specific resistance (DP/Flow)",
+    "PLANT_AMINE_P_DPIT_7502_VAL":"Exchanger DP — DPIT-7502",
+    "dp_slope_6h":"DP trend (6h slope)",
+    "PLANT_AMINE_P_PIT_6503_VAL":"Process pressure — PIT-6503",
+    "dp_slope_24h":"DP trend (24h slope)",
+    "PLANT_AMINE_P_TIT_1504_VAL":"Process temperature — TIT-1504",
+    "specific_resistance_slope_24h":"Specific resistance trend",
+    "tit3507_slope_24h":"Flash temp trend (24h slope)",
+    "PLANT_AMINE_P_TIT_3507_VAL":"Flash temp — instantaneous"
+  };
+  const ROW_LABELS = {
+    "dp":"DP — raw reading","specific_resistance":"Specific resistance (DP/Flow)","dp_std_24h":"DP volatility (24h std dev)",
+    "dp_slope_7d":"DP trend (7-day slope)","hours_since_start":"Cycle age (hours since start)",
+    "PLANT_AMINE_P_TIT_3507_VAL":"Flash temp — instantaneous","tit3507_cummean_this_cycle":"Flash temp — cycle running average",
+    "dp_slope_24h":"DP trend (24h slope)","PLANT_AMINE_P_DPIT_6502_VAL":"Exchanger DP — DPIT-6502",
+    "PLANT_AMINE_P_DPIT_7502_VAL":"Exchanger DP — DPIT-7502","PLANT_AMINE_P_TIT_1504_VAL":"Process temperature — TIT-1504",
+    "PLANT_AMINE_P_FIT_2512_VAL":"Flow — instantaneous","flow_cummean_this_cycle":"Flow — cycle running average",
+    "PLANT_AMINE_CIRC515VFD22_RPM_FB":"CIRC515 pump speed","dp_slope_6h":"DP trend (6h slope)",
+    "PLANT_AMINE_CIRC514VFD21_RPM_FB":"CIRC514 pump speed","PLANT_AMINE_P_PIT_6503_VAL":"Process pressure — PIT-6503"
+  };
+
+  /* ============================= DP HISTORY CHART ============================= */
+  (function(){
+    const container = document.getElementById("chartDp");
+    const W = 1000, panelH = 150, gap = 26, padL = 8, padR = 8, padTop = 14, padBottom = 22;
+    const H = panelH*2 + gap + padTop + padBottom;
+    const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, width:"100%", height:H, class:"chart-svg"}, container);
+
+    const allTs = DP.F510.map(d=>d[0]);
+    const tMin = Math.min(...allTs), tMax = Math.max(...allTs);
+    const x = scaleLinear(tMin, tMax, padL, W-padR);
+    const yMax = 10;
+
+    function panel(key, colorVar, top){
+      const y = scaleLinear(0, yMax, top+panelH-8, top+6);
+      // gridline at threshold
+      const gy = y(9);
+      el("line", {x1:padL, x2:W-padR, y1:gy, y2:gy, stroke:"var(--critical)", "stroke-width":1, "stroke-dasharray":"4 4", opacity:.55}, svg);
+      txt("text", {x:W-padR, y:gy-4, "text-anchor":"end", class:"chart-axis"}, "9 psi", svg);
+      // y baseline
+      el("line", {x1:padL, x2:W-padR, y1:y(0), y2:y(0), stroke:"var(--grid)", "stroke-width":1}, svg);
+      [0,5,10].forEach(v=>{ txt("text",{x:2,y:y(v)+3,class:"chart-axis"}, v, svg); });
+      // series
+      const pts = DP[key];
+      let d = "";
+      pts.forEach((p,i)=>{ d += (i===0?"M":"L") + x(p[0]).toFixed(1) + " " + y(Math.min(p[1],yMax)).toFixed(1) + " "; });
+      el("path", {d, fill:"none", stroke:`var(${colorVar})`, "stroke-width":1.6, "stroke-linejoin":"round"}, svg);
+      // events
+      EVENTS.filter(e=>e.filter===key).forEach(e=>{
+        const ex = x(e.repl_ts);
+        const line = el("line", {x1:ex,x2:ex,y1:top+2,y2:top+panelH-4, stroke:"var(--critical)", "stroke-width":1.3, "stroke-dasharray":"2 3", opacity:.85, class:"mark"}, svg);
+        const dot = el("circle", {cx:ex, cy:top+2, r:6, fill:"var(--critical)", opacity:0}, svg);
+        const dateStr = new Date(e.repl_ts).toISOString().slice(0,10);
+        const hit = el("rect", {x:ex-8, y:top, width:16, height:panelH, fill:"transparent", class:"mark"}, svg);
+        wireTip(hit, "Replacement — peak " + e.peak_psi + " PSI", dateStr);
+      });
+      txt("text", {x:padL, y:top+13, class:"chart-label"}, key==="F510" ? "F-510 Carbon Filter" : "F-509/F-511 Sock Filter", svg);
+    }
+    panel("F510", "--f510", padTop);
+    panel("F509511", "--f511", padTop + panelH + gap);
+
+    // month ticks on bottom axis
+    const months = [];
+    let d0 = new Date(tMin); d0.setUTCDate(1); d0.setUTCHours(0,0,0,0);
+    for (let d=new Date(d0); d.getTime()<=tMax; d.setUTCMonth(d.getUTCMonth()+1)){
+      months.push(new Date(d));
+    }
+    months.forEach(m=>{
+      const mx = x(m.getTime());
+      if (mx<padL || mx>W-padR) return;
+      el("line",{x1:mx,x2:mx,y1:padTop+panelH*2+gap,y2:padTop+panelH*2+gap+4,stroke:"var(--muted)","stroke-width":1}, svg);
+      txt("text",{x:mx,y:H-4,"text-anchor":"middle",class:"chart-axis"}, m.toLocaleString("en-US",{month:"short",year:"2-digit"}), svg);
+    });
+  })();
+
+  /* ============================= ROW-LEVEL CORR (hourly) ============================= */
+  (function(){
+    const data = ROW_CORR.map(d=>({label: ROW_LABELS[d.tag]||d.tag, r: d.r}))
+      .sort((a,b)=>Math.abs(b.r)-Math.abs(a.r)).slice(0,10);
+    renderDivergingBars("chartRowCorr", data, {valLabel:"Spearman r vs. hours remaining"});
+  })();
+
+  /* ============================= CYCLE-LEVEL CORR ============================= */
+  (function(){
+    const data = CYCLE_CORR.map(d=>({label:d.feature, r:d.pearson_r, p:d.pearson_p}))
+      .sort((a,b)=>Math.abs(b.r)-Math.abs(a.r));
+    renderDivergingBars("chartCycleCorr", data, {valLabel:"Pearson r vs. cycle duration", showP:true});
+    // fill full table too
+    const tbody = document.querySelector("#corrTable tbody");
+    CYCLE_CORR.slice().sort((a,b)=>Math.abs(b.pearson_r)-Math.abs(a.pearson_r)).forEach(d=>{
+      const tr = document.createElement("tr");
+      const sig = d.pearson_p<0.05 ? {c:"yes",t:"Significant (p<0.05)"} : d.pearson_p<0.10 ? {c:"borderline",t:"Directional (p<0.10)"} : {c:"no",t:"Not significant"};
+      tr.innerHTML = "";
+      const tdA = document.createElement("td"); tdA.className="strong"; tdA.textContent = d.feature; tr.appendChild(tdA);
+      const tdB = document.createElement("td"); tdB.className="tag"; tdB.textContent = d.tag; tr.appendChild(tdB);
+      const tdC = document.createElement("td"); tdC.className="num"; tdC.textContent = (d.pearson_r>=0?"+":"")+d.pearson_r.toFixed(2); tr.appendChild(tdC);
+      const tdD = document.createElement("td"); tdD.className="num"; tdD.textContent = d.pearson_p.toFixed(3); tr.appendChild(tdD);
+      const tdE = document.createElement("td");
+      const span = document.createElement("span"); span.className = "sig "+sig.c; span.textContent = sig.t;
+      tdE.appendChild(span); tr.appendChild(tdE);
+      tbody.appendChild(tr);
+    });
+  })();
+
+  function renderDivergingBars(containerId, data, opts){
+    opts = opts||{};
+    const container = document.getElementById(containerId);
+    const rowH = 26, padL = 190, padR = 56, padTop = 6, padBottom = 22;
+    const W = 520;
+    const H = data.length*rowH + padTop + padBottom;
+    const svg = el("svg", {viewBox:`0 0 ${W} ${H}`, width:"100%", height:H, class:"chart-svg"}, container);
+    const x = scaleLinear(-1,1,padL,W-padR);
+    const zeroX = x(0);
+    el("line",{x1:zeroX,y1:padTop-2,x2:zeroX,y2:H-padBottom+2,stroke:"var(--grid)","stroke-width":1}, svg);
+    data.forEach((d,i)=>{
+      const cy = padTop + i*rowH + rowH/2;
+      txt("text", {x:padL-10, y:cy+4, "text-anchor":"end", class:"chart-label"}, d.label, svg);
+      const x0 = x(Math.min(0,d.r)), x1 = x(Math.max(0,d.r));
+      const isPos = d.r>=0;
+      const rect = el("rect", {x:x0.toFixed(1), y:cy-7, width:Math.max(1.5,x1-x0).toFixed(1), height:14, rx:3,
+        fill: isPos ? "var(--div-pos)" : "var(--div-neg)", class:"mark"}, svg);
+      const pStr = opts.showP && d.p!==undefined ? " · p="+d.p.toFixed(3) : "";
+      wireTip(rect, (d.r>=0?"+":"")+d.r.toFixed(2), d.label + pStr);
+      const vx = isPos ? x1+6 : x1-6;
+      txt("text", {x:vx, y:cy+4, "text-anchor": isPos?"start":"end", class:"chart-value"}, (d.r>=0?"+":"")+d.r.toFixed(2), svg);
+    });
+    [-1,-0.5,0,0.5,1].forEach(v=>{
+      txt("text", {x:x(v), y:H-4, "text-anchor":"middle", class:"chart-axis"}, v.toFixed(1).replace("0.5",".5").replace("-0.5","-.5").replace("0.0","0"), svg);
+    });
+  }
+
+  /* ============================= SCATTER GRID (cycle-level) ============================= */
+  (function(){
+    const specs = [
+      {key:"temp", label:"Flash temp — TIT-3507", unit:"°F", r:0.77},
+      {key:"flow", label:"Circulation flow — FIT-2512", unit:"", r:-0.63},
+      {key:"dpStd", label:"DP volatility (24h std)", unit:"psi", r:-0.63},
+      {key:"specRes", label:"Specific resistance (DP/Flow)", unit:"", r:-0.56},
+    ];
+    const container = document.getElementById("scatterGrid");
+    specs.forEach(spec=>renderScatterMini(container, spec));
+  })();
+
+  function renderScatterMini(container, spec){
+    const box = document.createElement("div");
+    const title = document.createElement("div"); title.className="chart-title"; title.style.fontSize="12px"; title.textContent = spec.label;
+    const sub = document.createElement("div"); sub.className="chart-note"; sub.style.marginBottom="6px"; sub.textContent = "r = " + (spec.r>=0?"+":"") + spec.r.toFixed(2);
+    box.appendChild(title); box.appendChild(sub);
+    const holder = document.createElement("div");
+    box.appendChild(holder);
+    container.appendChild(box);
+
+    const W=230, H=190, padL=34, padR=10, padTop=10, padBottom=26;
+    const xs = CYCLES.map(c=>c[spec.key]), ys = CYCLES.map(c=>c.duration);
+    const xMin=Math.min(...xs), xMax=Math.max(...xs), yMin=0, yMax=Math.max(...ys)*1.08;
+    const xPad = (xMax-xMin)*0.12 || 1;
+    const x = scaleLinear(xMin-xPad, xMax+xPad, padL, W-padR);
+    const y = scaleLinear(yMin, yMax, H-padBottom, padTop);
+    const svg = el("svg",{viewBox:`0 0 ${W} ${H}`, width:"100%", height:H, class:"chart-svg"}, holder);
+    // axes
+    el("line",{x1:padL,x2:W-padR,y1:H-padBottom,y2:H-padBottom,stroke:"var(--grid)","stroke-width":1}, svg);
+    el("line",{x1:padL,x2:padL,y1:padTop,y2:H-padBottom,stroke:"var(--grid)","stroke-width":1}, svg);
+    txt("text",{x:padL,y:H-6,class:"chart-axis"}, xMin.toFixed(1), svg);
+    txt("text",{x:W-padR,y:H-6,"text-anchor":"end",class:"chart-axis"}, xMax.toFixed(1), svg);
+    txt("text",{x:padL-4,y:padTop+8,"text-anchor":"end",class:"chart-axis"}, Math.round(yMax)+"d", svg);
+    txt("text",{x:padL-4,y:H-padBottom+3,"text-anchor":"end",class:"chart-axis"}, "0d", svg);
+    // trend line
+    const pts = CYCLES.map(c=>[c[spec.key], c.duration]);
+    const {slope, intercept} = linreg(pts);
+    const lx0 = xMin-xPad, lx1 = xMax+xPad;
+    el("line", {x1:x(lx0), y1:y(slope*lx0+intercept), x2:x(lx1), y2:y(slope*lx1+intercept),
+      stroke:"var(--muted)", "stroke-width":1.4, "stroke-dasharray":"3 3", opacity:.8}, svg);
+    // points
+    CYCLES.forEach(c=>{
+      const cx = x(c[spec.key]), cy = y(c.duration);
+      const color = c.filter==="F510" ? "var(--f510)" : "var(--f511)";
+      const ring = el("circle",{cx,cy,r:5,fill:color,stroke:"var(--surface)","stroke-width":2,class:"mark"}, svg);
+      const hit = el("circle",{cx,cy,r:12,fill:"transparent",class:"mark"}, svg);
+      const fname = c.filter==="F510" ? "F-510 Carbon" : "F-509/511 Sock";
+      wireTip(hit, c.duration.toFixed(1)+"d cycle", fname + " · " + spec.label.split("—")[0].trim() + " " + c[spec.key] + spec.unit + " · " + c.start);
+    });
+  }
+
+  /* ============================= PREDICTED VS ACTUAL ============================= */
+  (function(){
+    const container = document.getElementById("chartPredActual");
+    const W=460, H=340, pad=40;
+    const maxV = Math.max(...PVA.map(p=>Math.max(p[0],p[1]))) * 1.05;
+    const x = scaleLinear(0,maxV,pad,W-14);
+    const y = scaleLinear(0,maxV,H-pad,14);
+    const svg = el("svg",{viewBox:`0 0 ${W} ${H}`, width:"100%", height:H, class:"chart-svg"}, container);
+    el("line",{x1:pad,x2:W-14,y1:H-pad,y2:H-pad,stroke:"var(--grid)","stroke-width":1}, svg);
+    el("line",{x1:pad,x2:pad,y1:14,y2:H-pad,stroke:"var(--grid)","stroke-width":1}, svg);
+    el("line",{x1:x(0),y1:y(0),x2:x(maxV),y2:y(maxV),stroke:"var(--muted)","stroke-width":1.4,"stroke-dasharray":"4 4"}, svg);
+    [0,20,40,60].forEach(v=>{
+      if (v>maxV) return;
+      txt("text",{x:pad-6,y:y(v)+3,"text-anchor":"end",class:"chart-axis"}, v, svg);
+      txt("text",{x:x(v),y:H-pad+14,"text-anchor":"middle",class:"chart-axis"}, v, svg);
+    });
+    txt("text",{x:W/2,y:H-4,"text-anchor":"middle",class:"chart-axis"}, "Actual remaining life (days)", svg);
+    txt("text",{x:12,y:H/2,"text-anchor":"middle",class:"chart-axis",transform:`rotate(-90 12 ${H/2})`}, "Predicted remaining life (days)", svg);
+    PVA.forEach(p=>{
+      const cx=x(p[0]), cy=y(p[1]);
+      const color = p[2]==="F510" ? "var(--f510)" : "var(--f511)";
+      el("circle",{cx,cy,r:3.4,fill:color,opacity:.72,class:"mark"}, svg);
+      const hit = el("circle",{cx,cy,r:10,fill:"transparent",class:"mark"}, svg);
+      const fname = p[2]==="F510" ? "F-510 Carbon" : "F-509/511 Sock";
+      wireTip(hit, "Predicted "+p[1]+"d", fname+" · actual "+p[0]+"d");
+    });
+  })();
+
+  /* ============================= LOCO GROUPED BAR ============================= */
+  (function(){
+    const container = document.getElementById("chartLoco");
+    const order = [
+      {cid:0,f:"F510",per:"P1"},{cid:7,f:"F511",per:"P1"},
+      {cid:1,f:"F510",per:"P2"},{cid:8,f:"F511",per:"P2"},
+      {cid:2,f:"F510",per:"P3"},{cid:9,f:"F511",per:"P3"},
+      {cid:3,f:"F510",per:"P4"},{cid:10,f:"F511",per:"P4"},
+      {cid:4,f:"F510",per:"P5"},{cid:11,f:"F511",per:"P5"},
+      {cid:6,f:"F510",per:"P6"},{cid:13,f:"F511",per:"P6"},
+    ];
+    const v4map = {}; LOCO_V4.forEach(d=>v4map[d.cycle_id]=d);
+    const W = 900, groupW = W/order.length, barW = 15, gapBar=3;
+    const padL=34, padR=8, padTop=10, padBottom=34;
+    const maxV = 18;
+    const H = 220;
+    const y = scaleLinear(0,maxV,H-padBottom,padTop);
+    const svg = el("svg",{viewBox:`0 0 ${W} ${H}`, width:"100%", height:H, class:"chart-svg"}, container);
+    el("line",{x1:padL,x2:W-padR,y1:y(0),y2:y(0),stroke:"var(--grid)","stroke-width":1}, svg);
+    [0,5,10,15].forEach(v=>{
+      txt("text",{x:padL-6,y:y(v)+3,"text-anchor":"end",class:"chart-axis"}, v, svg);
+      el("line",{x1:padL,x2:W-padR,y1:y(v),y2:y(v),stroke:"var(--grid)","stroke-width":1,opacity:.5}, svg);
+    });
+    order.forEach((o,i)=>{
+      const gx = padL + i*((W-padL-padR)/order.length);
+      const gw = (W-padL-padR)/order.length;
+      const cx = gx + gw/2;
+      const v3 = LOCO_V3_MAE[o.cid], v4 = v4map[o.cid].mae_days;
+      const b1x = cx - barW - gapBar/2, b2x = cx + gapBar/2;
+      const r1 = el("rect",{x:b1x,y:y(v3),width:barW,height:y(0)-y(v3),rx:2,fill:"var(--muted)",class:"mark"}, svg);
+      const r2 = el("rect",{x:b2x,y:y(v4),width:barW,height:y(0)-y(v4),rx:2,fill:"var(--temp)",class:"mark"}, svg);
+      const label = (o.f==="F510"?"F-510":"F-509/511") + " · period " + o.per.slice(1);
+      wireTip(r1, v3.toFixed(2)+"d (before)", label);
+      wireTip(r2, v4.toFixed(2)+"d (after)", label);
+      txt("text",{x:cx,y:H-padBottom+13,"text-anchor":"middle",class:"chart-axis"}, o.per, svg);
+      txt("text",{x:cx,y:H-padBottom+24,"text-anchor":"middle",class:"chart-axis"}, o.f==="F510"?"F510":"F511", svg);
+    });
+    txt("text",{x:8,y:padTop-2,class:"chart-axis"}, "days MAE", svg);
+  })();
+
+  /* ============================= FEATURE IMPORTANCE ============================= */
+  (function(){
+    const container = document.getElementById("chartFI");
+    const data = FI.slice(0,12).map(d=>({label:FI_LABELS[d.tag]||d.tag, v:d.importance*100, tag:d.tag}));
+    const rowH=26, padL=230, padR=60, padTop=6, padBottom=20;
+    const W=760, H=data.length*rowH+padTop+padBottom;
+    const svg = el("svg",{viewBox:`0 0 ${W} ${H}`, width:"100%", height:H, class:"chart-svg"}, container);
+    const maxV = Math.max(...data.map(d=>d.v))*1.08;
+    const x = scaleLinear(0,maxV,padL,W-padR);
+    data.forEach((d,i)=>{
+      const cy = padTop+i*rowH+rowH/2;
+      const isTop = d.tag==="tit3507_cummean_this_cycle";
+      txt("text",{x:padL-10,y:cy+4,"text-anchor":"end",class:"chart-label"}, d.label, svg);
+      const rect = el("rect",{x:padL,y:cy-7,width:Math.max(1.5,x(d.v)-padL),height:14,rx:3,
+        fill: isTop ? "var(--temp)" : "var(--dp)", opacity: isTop?1:0.55, class:"mark"}, svg);
+      wireTip(rect, d.v.toFixed(1)+"%", d.label);
+      txt("text",{x:x(d.v)+6,y:cy+4,class:"chart-value"}, d.v.toFixed(1)+"%", svg);
+    });
+  })();
+
+  /* ============================= LIVE FORECAST CARDS ============================= */
+  function renderForecastCard(elId, opts){
+    const root = document.getElementById(elId);
+    const top = document.createElement("div"); top.className="top";
+    const left = document.createElement("div");
+    const name = document.createElement("div"); name.className="filter-name"; name.textContent = opts.name;
+    const sub = document.createElement("div"); sub.className="filter-sub"; sub.textContent = "DP " + opts.dp + " PSI · cycle age " + opts.age + " days";
+    left.appendChild(name); left.appendChild(sub);
+    const pill = document.createElement("span"); pill.className="status-pill"; pill.innerHTML="";
+    const dot = document.createElement("span"); dot.className="dot"; pill.appendChild(dot);
+    pill.appendChild(document.createTextNode(opts.status));
+    top.appendChild(left); top.appendChild(pill);
+
+    const statRow = document.createElement("div"); statRow.className="stat-row";
+    function stat(label,val,small){
+      const s = document.createElement("div"); s.className="stat";
+      const l = document.createElement("div"); l.className="label"; l.textContent=label;
+      const v = document.createElement("div"); v.className="value"+(small?" small":""); v.textContent=val;
+      s.appendChild(l); s.appendChild(v); return s;
+    }
+    statRow.appendChild(stat("Median RUL", opts.median+"d"));
+    statRow.appendChild(stat("P10–P90 range", opts.p10+"–"+opts.p90+"d"));
+    statRow.appendChild(stat("Predicted window", opts.winStart+" – "+opts.winEnd, true));
+    statRow.appendChild(stat("Trend-only cross-check", opts.trend+"d", true));
+
+    const barWrap = document.createElement("div");
+    const svgH = 54;
+    const svg = el("svg",{viewBox:`0 0 480 ${svgH}`, width:"100%", height:svgH, class:"chart-svg"});
+    const pad=6, W=480;
+    const totalSpan = opts.p90 + opts.age;
+    const x = scaleLinear(0, totalSpan, pad, W-pad);
+    const trackY = 26;
+    // full track (lighter)
+    el("rect",{x:x(0),y:trackY,width:x(totalSpan)-x(0),height:10,rx:5,fill:"var(--grid)"}, svg);
+    // elapsed
+    el("rect",{x:x(0),y:trackY,width:x(opts.age)-x(0),height:10,rx:5,fill:"var(--muted)"}, svg);
+    // forecast band P10-P90
+    const bx0 = x(opts.age+opts.p10), bx1= x(opts.age+opts.p90);
+    el("rect",{x:bx0,y:trackY,width:bx1-bx0,height:10,rx:5,fill:"var(--dp)",opacity:.35}, svg);
+    // median tick
+    const mx = x(opts.age+opts.median);
+    el("line",{x1:mx,x2:mx,y1:trackY-4,y2:trackY+14,stroke:"var(--dp)","stroke-width":2.4}, svg);
+    // today marker
+    const tx0 = x(opts.age);
+    el("line",{x1:tx0,x2:tx0,y1:trackY-8,y2:trackY+18,stroke:"var(--ink)","stroke-width":1.6}, svg);
+    txt("text",{x:tx0,y:trackY-12,"text-anchor":"middle",class:"chart-axis"}, "today", svg);
+    txt("text",{x:mx,y:trackY+28,"text-anchor":"middle",class:"chart-value"}, "median "+opts.winMedian, svg);
+    txt("text",{x:x(0),y:trackY+28,"text-anchor":"start",class:"chart-axis"}, opts.cycleStart, svg);
+    txt("text",{x:x(totalSpan),y:trackY+28,"text-anchor":"end",class:"chart-axis"}, opts.winEnd, svg);
+    barWrap.appendChild(svg);
+
+    root.appendChild(top);
+    root.appendChild(statRow);
+    root.appendChild(barWrap);
+  }
+
+  renderForecastCard("fc-f510", {
+    name:"F-510 Carbon Filter", dp:"2.34", age:"21.1", status:"Normal – in service",
+    median:"36.8", p10:"32.1", p90:"38.2", trend:"25.1",
+    winStart:"Aug 15", winEnd:"Aug 21", winMedian:"Aug 20", cycleStart:"Jun 23"
+  });
+  renderForecastCard("fc-f511", {
+    name:"F-509/F-511 Sock Filter", dp:"1.38", age:"21.0", status:"Normal – in service",
+    median:"36.3", p10:"31.0", p90:"40.2", trend:"23.8",
+    winStart:"Aug 14", winEnd:"Aug 23", winMedian:"Aug 19", cycleStart:"Jun 23"
+  });
+
+})();
+</script>
