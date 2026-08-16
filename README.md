@@ -72,8 +72,8 @@ Full breakdown, correlation tables, and per-cycle validation results in
 - **Live scoring pipeline**: Azure Functions (Timer Trigger), OAuth2 client-
   credentials auth, Azure DevOps CI/CD
 - **Dashboard**: hand-built HTML/SVG (no charting library) — every chart
-  (DP trend + forecast band, parameter trends, cycle history) is inline SVG
-  driven by real embedded data
+  (DP trend + forecast band, daily ΔP & fouling-rate comparison) is inline
+  SVG driven by real embedded data
 - **Companion semantic model**: Power BI (TMDL), 11 tables / 39 DAX measures,
   built for a live operational deployment of the same model
 
